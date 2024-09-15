@@ -5,6 +5,11 @@ TagManager:
   serializedVersion: 2
   tags:
   - GameMusic
+  - Wall
+  - WallTop
+  - WallBottom
+  - WallLeft
+  - WallRight
   layers:
   - Default
   - TransparentFX

@@ -11,22 +11,37 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody rb;
     private Animator animator;
 
-    void Start()
+    Vector3 desiredMoveDirection;
+    bool collidedWithWall;
+    float moveHorizontal;
+    float moveVertical;
+    float savedSpeed;
+
+    [SerializeField]
+    [Range(0, 1)] float cutoffTime;
+
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+    }
+
+    private void Start() {
+        savedSpeed = moveSpeed;
+        collidedWithWall = false;
     }
 
     void Update()
     {
         Move();
         Animate();
+        Debug.Log(collidedWithWall);
     }
 
     void Move()
     {
-        float moveHorizontal = Input.GetAxis("Horizontal");
-        float moveVertical = Input.GetAxis("Vertical");
+        moveHorizontal = Input.GetAxis("Horizontal");
+        moveVertical = Input.GetAxis("Vertical");
 
         // Get the forward direction of the camera and remove the y component to avoid upward/downward movement
         Vector3 forward = playerCamera.transform.forward;
@@ -37,17 +52,71 @@ public class PlayerMovement : MonoBehaviour
         right.y = 0;
         right.Normalize();
 
+        desiredMoveDirection = (forward * moveVertical + right * moveHorizontal).normalized;
+        Debug.Log(desiredMoveDirection);
+
         // Determine the direction based on camera's forward and right vectors
-        Vector3 desiredMoveDirection = (forward * moveVertical + right * moveHorizontal).normalized;
+        if (collidedWithWall && animator.GetFloat("Speed") > cutoffTime) {
+            desiredMoveDirection = Vector3.zero;
+        }
+        else {
+            collidedWithWall = false;
+        }
+        Debug.Log(moveHorizontal);
+        Debug.Log(moveVertical);
 
         // Move the character
-        rb.MovePosition(transform.position + desiredMoveDirection * moveSpeed * Time.deltaTime);
+        rb.MovePosition(rb.position + (desiredMoveDirection * moveSpeed * Time.deltaTime));
 
         // Rotate the character towards the movement direction
         if (desiredMoveDirection != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(desiredMoveDirection);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
+        }
+        /*else if(desiredMoveDirection == Vector3.zero && collidedWithWall){
+            collidedWithWall = false;
+        }*/
+    }
+
+    private void OnCollisionEnter(Collision collision) {
+        /*if (collision.gameObject.CompareTag("WallLeft")) {
+            if (moveHorizontal < 0) {
+                moveSpeed = 0;
+                collidedWithWall = true;
+            }
+            else if ((moveHorizontal > 0 || moveVertical > 0 || moveVertical < 0) && collidedWithWall) {
+                collidedWithWall = false;
+                moveSpeed = savedSpeed;
+            }
+        }
+        else if (collision.gameObject.CompareTag("WallRight")) {
+            if (moveHorizontal > 0) {
+                moveSpeed = 0;
+            }
+            else if (moveHorizontal < 0 || moveVertical > 0 || moveVertical < 0) {
+                moveSpeed = savedSpeed;
+            }
+        }
+        else if (collision.gameObject.CompareTag("WallTop")) {
+            if (moveVertical > 0) {
+                moveSpeed = 0;
+            }
+            else if (moveHorizontal > 0 || moveHorizontal < 0 || moveVertical < 0) {
+                moveSpeed = savedSpeed;
+            }
+        }
+        else if (collision.gameObject.CompareTag("WallBottom")) {
+            if (moveVertical < 0) {
+                moveSpeed = 0;
+            }
+            else if (moveHorizontal > 0 || moveHorizontal < 0 || moveVertical > 0) {
+                moveSpeed = savedSpeed;
+            }
+        }*/
+
+        if (collision.gameObject.CompareTag("Wall")) {
+            collidedWithWall = true;
         }
     }
 
