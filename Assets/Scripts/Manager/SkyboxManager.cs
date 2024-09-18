@@ -24,16 +24,16 @@ public class SkyboxManager : MonoBehaviour
         skyboxMaterial = RenderSettings.skybox;
         currentSkyColor = skyboxMaterial.GetColor("_Tint");
         exposureValue = skyboxMaterial.GetFloat("_Exposure");
-        StartCoroutine(DayNight());
+        //StartCoroutine(DayNight());
         //Debug.Log(skyboxMaterial.name);
     }
 
-    private IEnumerator DayNight() {
+    public IEnumerator DayNight() {
         timer = startTimer;
         /*Color changeColor;
         changeColor = new Color(1.0f, 1.0f, 1.0f, 1.0f);*/
         //testSlider.interactable = false;
-        for (; ; ) {
+        /*for (; ; ) {
             do {
                 timer -= Time.deltaTime;
                 DayNightCycle(timer / startTimer);
@@ -44,7 +44,13 @@ public class SkyboxManager : MonoBehaviour
                 DayNightCycle(timer / startTimer);
                 yield return null;
             } while (timer < startTimer);
-        }
+        }*/
+
+        do {
+            timer -= Time.deltaTime;
+            DayNightCycle(timer / startTimer);
+            yield return null;
+        } while (timer > 0);
     }
 
     void DayNightCycle(float normalizedTime) {
@@ -58,7 +64,7 @@ public class SkyboxManager : MonoBehaviour
         currentSkyColor = Color.Lerp(nightColor, dayColor, normalizedTime);
         exposureValue = Mathf.Lerp(0.25f, 0.85f, normalizedTime);
         rotatingValue = Mathf.Lerp(0, 360, normalizedTime);
-        Debug.Log(exposureValue);
+        //Debug.Log(exposureValue);
 
         float rotationValue = Mathf.Lerp(-25f, 50f, normalizedTime);
         float intensityValue = Mathf.Lerp(0.25f, 1.55f, normalizedTime);

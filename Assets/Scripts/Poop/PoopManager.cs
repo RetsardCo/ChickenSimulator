@@ -10,17 +10,31 @@ public class PoopManager : MonoBehaviour
 
     public PoopSpawner spawner;
 
-    public int spawnNumber;
+    [Range(5, 15), SerializeField]
+    int spawnRandomNumber;
+
+    int poopNumber;
     
     void Start()
     {
         generatePoop += spawner.spawnPoop;
-        Spawn();
+        //Spawn();
     }
 
-    void Spawn()
+    public void Spawn()
     {
-        var poopToSpawn = spawnNumber;
+        var poopToSpawn = PoopNumbers();
+        Debug.Log(poopNumber);
         generatePoop?.Invoke(poopToSpawn);
+    }
+
+    public int Poop() {
+        return poopNumber;
+    }
+
+    int PoopNumbers() {
+        int i = Random.Range(4, spawnRandomNumber);
+        poopNumber = i;
+        return poopNumber;
     }
 }
