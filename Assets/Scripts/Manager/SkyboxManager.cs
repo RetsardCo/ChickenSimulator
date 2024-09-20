@@ -24,6 +24,12 @@ public class SkyboxManager : MonoBehaviour
         skyboxMaterial = RenderSettings.skybox;
         currentSkyColor = skyboxMaterial.GetColor("_Tint");
         exposureValue = skyboxMaterial.GetFloat("_Exposure");
+        currentSkyColor = new Color(0.8f, 0.8f, 1.0f, 1.0f);
+        currentFogColor = new Color(0.2775f, 0.7642f, 0.6767f, 1.0f);
+        directionalLight.intensity = 1.55f;
+        exposureValue = 0.85f;
+        skyboxMaterial.SetColor("_Tint", currentSkyColor);
+        skyboxMaterial.SetFloat("_Exposure", exposureValue);
         //StartCoroutine(DayNight());
         //Debug.Log(skyboxMaterial.name);
     }

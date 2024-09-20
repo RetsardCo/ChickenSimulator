@@ -16,15 +16,6 @@ public class PoopSpawner : MonoBehaviour
     [Header("Layer to Detect"), SerializeField]
     private LayerMask detectionLayer;  // Specify the layer(s) to check for collisions.
 
-    private void Start()
-    {
-
-    }
-    private void Update()
-    {
-        
-    }
-
     public void spawnPoop(int poopToSpawn)
     {
         Debug.Log(poopToSpawn);

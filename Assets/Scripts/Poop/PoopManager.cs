@@ -24,7 +24,7 @@ public class PoopManager : MonoBehaviour
     public void Spawn()
     {
         var poopToSpawn = PoopNumbers();
-        Debug.Log(poopNumber);
+        //Debug.Log(poopNumber);
         generatePoop?.Invoke(poopToSpawn);
     }
 

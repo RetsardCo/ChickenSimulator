@@ -18,14 +18,19 @@ public class CameraWClipping : MonoBehaviour
     private float currentY = 0f;
     private float rotationSpeed = 5f;
 
+    private void Start() {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
     void Update()
     {
-        if (Input.GetMouseButton(1)) // Right mouse button to rotate the camera
-        {
+        //if (Input.GetMouseButton(1)) // Right mouse button to rotate the camera
+        //{
             currentX += Input.GetAxis("Mouse X") * rotationSpeed;
             currentY -= Input.GetAxis("Mouse Y") * rotationSpeed;
             currentY = Mathf.Clamp(currentY, -20f, 60f);
-        }
+        //}
 
         distance -= Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
         distance = Mathf.Clamp(distance, minZoomDistance, maxZoomDistance);

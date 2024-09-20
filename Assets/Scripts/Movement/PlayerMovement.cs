@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -17,6 +18,8 @@ public class PlayerMovement : MonoBehaviour
     float moveVertical;
     float savedSpeed;
 
+    bool cleanPoop;
+
     [SerializeField]
     [Range(0, 1)] float cutoffTime;
 
@@ -29,6 +32,7 @@ public class PlayerMovement : MonoBehaviour
     private void Start() {
         savedSpeed = moveSpeed;
         collidedWithWall = false;
+        cleanPoop = false;
     }
 
     void Update()
@@ -53,7 +57,7 @@ public class PlayerMovement : MonoBehaviour
         right.Normalize();
 
         desiredMoveDirection = (forward * moveVertical + right * moveHorizontal).normalized;
-        Debug.Log(desiredMoveDirection);
+        //Debug.Log(desiredMoveDirection);
 
         // Determine the direction based on camera's forward and right vectors
         if (collidedWithWall && animator.GetFloat("Speed") > cutoffTime) {
@@ -62,8 +66,8 @@ public class PlayerMovement : MonoBehaviour
         else {
             collidedWithWall = false;
         }
-        Debug.Log(moveHorizontal);
-        Debug.Log(moveVertical);
+        //Debug.Log(moveHorizontal);
+        //Debug.Log(moveVertical);
 
         // Move the character
         rb.MovePosition(rb.position + (desiredMoveDirection * moveSpeed * Time.deltaTime));
@@ -118,6 +122,28 @@ public class PlayerMovement : MonoBehaviour
         if (collision.gameObject.CompareTag("Wall")) {
             collidedWithWall = true;
         }
+    }
+
+    private void OnTriggerEnter(Collider other) {
+        
+    }
+
+    private void OnTriggerStay(Collider other) {
+        /*if (other.CompareTag("Poop")) {
+            
+            if (Input.GetKeyDown(KeyCode.E)) {
+                Debug.Log(other.tag);
+                Destroy(other.gameObject);
+                gameManager.PoopCount();
+            }
+            //Destroy(other);
+        }*/
+    }
+
+    IEnumerator CleanPoop() {
+        cleanPoop = true;
+        yield return new WaitForSeconds(0.25f);
+        cleanPoop = false;
     }
 
     void Animate()

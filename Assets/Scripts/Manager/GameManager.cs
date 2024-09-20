@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -14,7 +15,7 @@ public class GameManager : MonoBehaviour
     GameObject[] questLabels;
 
     [Header("Poop Goals"), SerializeField]
-    PoopManager poopManager;
+    SpawnPoop spawnPoop;
 
     [Header("Skybox and Time Limit"), SerializeField]
     SkyboxManager skyboxManager;
@@ -31,10 +32,13 @@ public class GameManager : MonoBehaviour
     List<string> daily;
     string[] missions;
 
+    bool isMenuActive;
+
     private void Start() {
         daily = new List<string>();
         missions = new string[] { "feed", "drink", "medicate", "clean"};
         missionsBox.SetActive(false);
+        isMenuActive = false;
         StartCoroutine(GameCycle());
 
     }
@@ -43,6 +47,57 @@ public class GameManager : MonoBehaviour
         /*if (Input.GetKeyDown(KeyCode.E)) {
             DayStart();
         }*/
+
+        if (Input.GetKeyDown(KeyCode.M)) {
+            if (!isMenuActive) {
+                missionsBox.SetActive(true);
+                isMenuActive = true;
+                Time.timeScale = 0f;
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            else if (isMenuActive) {
+                missionsBox.SetActive(false);
+                isMenuActive = false;
+                Time.timeScale = 1f;
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.F1)) {
+            SceneManager.LoadScene("Layer");
+        }
+    }
+
+    public void PoopCount() {
+        cleanScore++;
+        GoalFind("clean");
+    }
+
+    void GoalFind(string goal) {
+        foreach (string dailies in daily) {
+            if (goal == dailies) {
+                Transform scoreTransform = questLabels[daily.IndexOf(goal)].transform.Find("current");
+                if (scoreTransform != null) {
+                    TextMeshProUGUI scoreText = scoreTransform.GetComponent<TextMeshProUGUI>();
+                    if (scoreText != null) {
+                        if (goal == "clean") {
+                            scoreText.text = cleanScore.ToString();
+                        }
+                        else if (goal == "feed") {
+                            scoreText.text = feedScore.ToString();
+                        }
+                        else if (goal == "drink") {
+                            scoreText.text = drinkScore.ToString();
+                        }
+                        else if (goal == "medicate") {
+                            scoreText.text = medicateScore.ToString();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private IEnumerator GameCycle() {
@@ -58,10 +113,10 @@ public class GameManager : MonoBehaviour
         DayStart();
         missionsBox.SetActive(false);
         dayLabel.text = "Day " + days.ToString();
-        textAnimator.SetTrigger("StartOfDayEnter");
+        //textAnimator.SetTrigger("StartOfDayEnter");
         yield return new WaitForSeconds(5f);
-        textAnimator.SetTrigger("StartOfDayExit");
-        bgAnimator.SetTrigger("BGFadeOut");
+        //textAnimator.SetTrigger("StartOfDayExit");
+        //bgAnimator.SetTrigger("BGFadeOut");
         StartCoroutine(BGDisappear());
        yield return StartCoroutine(skyboxManager.DayNight());
         //Time.timeScale = 1f;
@@ -71,11 +126,12 @@ public class GameManager : MonoBehaviour
         missionsBox.SetActive(false);
         bg.enabled = true;
         dayLabel.text = "Day " + days.ToString() + " ended.";
-        textAnimator.SetTrigger("StartOfDayEnter");
+        ResetAllScores();
+        //textAnimator.SetTrigger("StartOfDayEnter");
         yield return new WaitForSeconds(2.5f);
-        bgAnimator.SetTrigger("BGFadeIn");
+        //bgAnimator.SetTrigger("BGFadeIn");
         yield return new WaitForSeconds(2.5f);
-        textAnimator.SetTrigger("StartOfDayExit");
+        //textAnimator.SetTrigger("StartOfDayExit");
         days++;
     }
 
@@ -211,10 +267,11 @@ public class GameManager : MonoBehaviour
         else if (goal == "clean") {
             /*poopManager.GetComponent<PoopManager>().Spawn();
             cleanScore = poopManager.GetComponent<PoopManager>().Poop();*/
-            poopManager.Spawn();
-            cleanScore = poopManager.Poop();
+            spawnPoop.PoopSpawn();
+            scoreTarget = spawnPoop.GivePoopNumber().ToString();
+            Debug.Log("Number to Spawn: " + scoreTarget);
             Debug.Log(cleanScore);
-            scoreTarget = cleanScore.ToString();
+            //scoreTarget = cleanScore.ToString();
         }
         return scoreTarget;
     }
@@ -224,6 +281,15 @@ public class GameManager : MonoBehaviour
         drinkScore = 0;
         cleanScore = 0;
         medicateScore = 0;
+        foreach (GameObject go in questLabels) {
+            Transform scoreTransform = go.transform.Find("current");
+            if (scoreTransform != null) {
+                TextMeshProUGUI scoreText = scoreTransform.GetComponent<TextMeshProUGUI>();
+                if (scoreText != null) {
+                    scoreText.text = 0.ToString();
+                }
+            }
+        }
     }
 
     string AddMissions() {
