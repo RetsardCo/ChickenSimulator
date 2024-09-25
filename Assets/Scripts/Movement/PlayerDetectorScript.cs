@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerDetectorScript : MonoBehaviour
 {
     [SerializeField]GameManager gameManager;
+    [SerializeField]MinigameScript gameScript;
 
     FeederScript feederScript;
     DrinkerScript drinkerScript;
@@ -19,9 +20,11 @@ public class PlayerDetectorScript : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.E)) {
             if (feederDetected) {
                 feederScript.FeederCalled();
+                gameScript.MiniGameCalled("feeder");
             }
             else if (drinkerDetected) {
                 drinkerScript.DrinkerCalled();
+                gameScript.MiniGameCalled("drinker");
             }
             else if (poopDetected) {
                 poopScript.DeletePoop();

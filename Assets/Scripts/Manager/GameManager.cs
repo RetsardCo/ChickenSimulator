@@ -29,12 +29,15 @@ public class GameManager : MonoBehaviour
     [SerializeField] Animator textAnimator;
     [SerializeField] Animator bgAnimator;
 
+    [HideInInspector] public bool isPaused;
+
     List<string> daily;
     string[] missions;
 
     bool isMenuActive;
 
     private void Start() {
+        isPaused = false;
         daily = new List<string>();
         missions = new string[] { "feed", "drink", "medicate", "clean"};
         missionsBox.SetActive(false);
@@ -65,6 +68,17 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        if (Input.GetKeyDown(KeyCode.Escape)) {
+            if (!isPaused) {
+                Time.timeScale = 0f;
+                isPaused = true;
+            }
+            else if (isPaused) {
+                Time.timeScale = 1f;
+                isPaused = false;
+            }
+        }
+
         if (Input.GetKeyDown(KeyCode.F1)) {
             SceneManager.LoadScene("Layer");
         }
@@ -73,6 +87,16 @@ public class GameManager : MonoBehaviour
     public void PoopCount() {
         cleanScore++;
         GoalFind("clean");
+    }
+
+    public void FeedCount() {
+        feedScore++;
+        GoalFind("feed");
+    }
+
+    public void DrinkCount() {
+        drinkScore++;
+        GoalFind("drink");
     }
 
     void GoalFind(string goal) {

@@ -18,6 +18,9 @@ public class CameraWClipping : MonoBehaviour
     private float currentY = 0f;
     private float rotationSpeed = 5f;
 
+    [SerializeField] GameManager gameManager;
+    [SerializeField] MinigameScript minigameScript;
+
     private void Start() {
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
@@ -25,15 +28,17 @@ public class CameraWClipping : MonoBehaviour
 
     void Update()
     {
-        //if (Input.GetMouseButton(1)) // Right mouse button to rotate the camera
-        //{
+        Debug.Log("Is Paused: " + gameManager.isPaused);
+        Debug.Log("Is in Minigame: " + minigameScript.isInMinigame);
+        if (!gameManager.isPaused && !minigameScript.isInMinigame)
+        {
             currentX += Input.GetAxis("Mouse X") * rotationSpeed;
             currentY -= Input.GetAxis("Mouse Y") * rotationSpeed;
             currentY = Mathf.Clamp(currentY, -20f, 60f);
-        //}
 
-        distance -= Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
-        distance = Mathf.Clamp(distance, minZoomDistance, maxZoomDistance);
+            distance -= Input.GetAxis("Mouse ScrollWheel") * zoomSpeed;
+            distance = Mathf.Clamp(distance, minZoomDistance, maxZoomDistance);
+        }
     }
 
     void LateUpdate()

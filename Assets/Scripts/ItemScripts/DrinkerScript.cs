@@ -8,6 +8,7 @@ public class DrinkerScript : MonoBehaviour
     [SerializeField] int drinkerID;
 
     public void DrinkerCalled() {
-        Debug.Log("ID of this drinker is: " + drinkerID); ;
+        Debug.Log("ID of this drinker is: " + drinkerID);
+        
     }
 }

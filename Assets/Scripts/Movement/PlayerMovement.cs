@@ -23,6 +23,9 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField]
     [Range(0, 1)] float cutoffTime;
 
+    [SerializeField] MinigameScript minigameScript;
+    [SerializeField] GameManager gameManager;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -37,7 +40,9 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        Move();
+        if (!gameManager.isPaused && !minigameScript.isInMinigame) {
+            Move();
+        }
         Animate();
         Debug.Log(collidedWithWall);
     }
@@ -149,9 +154,15 @@ public class PlayerMovement : MonoBehaviour
     void Animate()
     {
         // Calculate speed
-        float speed = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")).magnitude;
+        float speed = 0;
 
         // Update Animator parameters
+        if (minigameScript.isInMinigame) {
+            speed = 0f;
+        }
+        else {
+            speed = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")).magnitude;
+        }
         animator.SetFloat("Speed", speed);
         //animator.SetBool("IsMoving", speed > 0);
     }

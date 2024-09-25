@@ -9,6 +9,8 @@ public class SkyboxManager : MonoBehaviour
     [SerializeField] Material skyboxMaterial;
     [SerializeField] Light directionalLight;
 
+    [SerializeField] MinigameScript minigameScript;
+
     Color currentSkyColor;
     Color currentFogColor;
     float exposureValue;
@@ -53,8 +55,11 @@ public class SkyboxManager : MonoBehaviour
         }*/
 
         do {
-            timer -= Time.deltaTime;
-            DayNightCycle(timer / startTimer);
+            if (!minigameScript.isInMinigame) {
+                timer -= Time.deltaTime;
+                DayNightCycle(timer / startTimer);
+                Debug.Log(timer);
+            }
             yield return null;
         } while (timer > 0);
     }
