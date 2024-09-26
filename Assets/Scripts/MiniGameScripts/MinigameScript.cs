@@ -22,29 +22,47 @@ public class MinigameScript : MonoBehaviour
     DrinkerScript drinkerScript;
     FeederScript feederScript;
 
-    [Header("Minigame Parameters")]
+    [Header("Feeder Minigame Parameters")]
     [SerializeField] float minArrowAngle;
     [SerializeField] float maxArrowAngle;
     [SerializeField] float minThresholdAddition;
     [SerializeField] float maxThresholdAddition;
     [SerializeField, Range(2, 5)] float speedMultiplier;
-
-    [Header("Feeder Minigame Assets")]
-    [SerializeField] RectTransform arrow;
-    [SerializeField] RectTransform threeColors;
-
-    bool isSpacePressed;
-    bool isFeederMinigame;
-    bool isDrinkerMinigame;
-
-    [HideInInspector] public bool isInMinigame;
-
     float minigameSpeed = 0.0f;
     float runningSpeed;
 
     float threshold;
     float minThreshold;
     float maxThreshold;
+
+    [Header("Feeder Minigame Assets")]
+    [SerializeField] RectTransform arrow;
+    [SerializeField] RectTransform threeColors;
+
+    [Header("Drinker Minigame Parameters")]
+    [SerializeField] float minimumWater;
+    [SerializeField] float maximumWater;
+    [SerializeField] float minimumRandom;
+    [SerializeField] float maximumRandom;
+    [SerializeField] float addMinus;
+    [SerializeField, Range(10, 20)] float drinkerMultiplier;
+    [SerializeField] float targetPositionX;
+    float sliderSpeed = 0.0f;
+    float sliderIncreasing;
+    float minimumTarget;
+    float maximumTarget;
+    float targetAmount;
+    bool maxReached;
+
+    [Header("Drinker Asset")]
+    [SerializeField] Slider drinkerSlider;
+    [SerializeField] RectTransform drinkerTarget;
+
+    bool isSpacePressed;
+    bool isFeederMinigame;
+    bool isDrinkerMinigame;
+
+    [HideInInspector] public bool isInMinigame;
 
     private void Awake() {
         if (globalVolume != null && globalVolume.profile != null) {
@@ -57,9 +75,12 @@ public class MinigameScript : MonoBehaviour
 
     private void Start() {
         feedingMinigameScreen.SetActive(false);
-        //drinkingMinigameScreen.SetActive(false);
+        drinkingMinigameScreen.SetActive(false);
+        drinkerSlider.minValue = minimumWater;
+        drinkerSlider.maxValue = maximumWater;
+        ResetValues();
         isInMinigame = false;
-        //MiniGameCalled("feeder");
+        //MiniGameCalled("drinker");
     }
 
     private void Update() {
@@ -72,6 +93,9 @@ public class MinigameScript : MonoBehaviour
         }
         if (isDrinkerMinigame) {
             DrinkerMinigame();
+            if (!maxReached) {
+                drinkerSlider.value = Mathf.Lerp(minimumWater, maximumWater, sliderSpeed / maximumWater);
+            }
         }
     }
 
@@ -80,6 +104,8 @@ public class MinigameScript : MonoBehaviour
         isInMinigame = true;
         depthOfField.active = true;
         if (whatGame == "feeder") {
+            isFeederMinigame = true;
+            isSpacePressed = false;
             threshold = Random.Range(maxArrowAngle + maxThresholdAddition, minArrowAngle - minThresholdAddition);
             minThreshold = threshold - 10f;
             maxThreshold = threshold + 10f;
@@ -91,15 +117,22 @@ public class MinigameScript : MonoBehaviour
                 maxThreshold = minArrowAngle;
             }
             threeColors.localEulerAngles = new Vector3(0, 0, threshold);
-            isFeederMinigame = true;
-            isSpacePressed = false;
             feedingMinigameScreen.SetActive(true);
         }
         //Debug.Log("Threshold: " + threshold + "Minimum Threshold: " + max);
         else if (whatGame == "drinker") {
             isDrinkerMinigame = true;
+            targetAmount = Random.Range(minimumRandom, maximumRandom);
+
+            if (targetAmount >= maximumRandom) {
+                targetAmount = maximumRandom;
+            }
+            minimumTarget = targetAmount - addMinus;
+            maximumTarget = targetAmount + addMinus;
+            drinkerTarget.localPosition = new Vector3(targetPositionX, targetAmount, 0);
+            drinkingMinigameScreen.SetActive(true);
         }
-        StartCoroutine(Waiting());
+        //StartCoroutine(Waiting());
     }
 
     void HideButtons() {
@@ -121,7 +154,6 @@ public class MinigameScript : MonoBehaviour
         }
 
         if (!isSpacePressed) {
-            Debug.Log("I am called");
             runningSpeed += -(Time.deltaTime * speedMultiplier);
             minigameSpeed = runningSpeed * 3.6f;
         }
@@ -132,29 +164,63 @@ public class MinigameScript : MonoBehaviour
         }
     }
 
-    IEnumerator Waiting() {
+    /*IEnumerator Waiting() {
         if (isFeederMinigame) {
             while (!isSpacePressed || minigameSpeed < maxArrowAngle) {
                 yield return null;
             }
         }
-    }
+        if (isDrinkerMinigame) {
+            yield return new WaitUntil(() => Input.GetKeyUp(KeyCode.Space) || maxReached);
+        }
+    }*/
 
     void DrinkerMinigame() {
+        if (Input.GetKey(KeyCode.Space)) {
+            //Debug.Log(sliderSpeed);
+            sliderIncreasing += Time.deltaTime * drinkerMultiplier;
+            sliderSpeed = sliderIncreasing * 3.6f;
+            
+        }
 
+        if (Input.GetKeyUp(KeyCode.Space)) {
+            StartCoroutine(ResultsDisplay());
+        }
+
+        if (sliderSpeed >= drinkerSlider.maxValue) {
+            sliderSpeed = drinkerSlider.maxValue;
+            maxReached = true;
+            StartCoroutine(ResultsDisplay());
+        }
     }
 
     IEnumerator ResultsDisplay() {
-        yield return null;
-        if (arrow.localEulerAngles.z >= threeColors.localEulerAngles.z - minThresholdAddition && arrow.localEulerAngles.z <= threeColors.localEulerAngles.z - maxThresholdAddition) {
-            Debug.Log("Just Right");
+        if (isFeederMinigame) {
+            if (arrow.localEulerAngles.z >= threeColors.localEulerAngles.z - minThresholdAddition && arrow.localEulerAngles.z <= threeColors.localEulerAngles.z - maxThresholdAddition) {
+                Debug.Log("Just Right");
+            }
+            else if (arrow.localEulerAngles.z > minThreshold) {
+                Debug.Log("Underfed");
+            }
+            else if (arrow.localEulerAngles.z < maxThreshold) {
+                Debug.Log("Overfed");
+            }
         }
-        else if (arrow.localEulerAngles.z > minThreshold) {
-            Debug.Log("Underfed");
+        else if (isDrinkerMinigame) {
+            if (drinkerSlider.value >= minimumTarget && drinkerSlider.value <= maximumTarget) {
+                Debug.Log("Just Right");
+            }
+            else if (drinkerSlider.value < minimumTarget) {
+                Debug.Log("Underhydrated");
+            }
+            else if (drinkerSlider.value > maximumTarget) {
+                Debug.Log("Overhydrated");
+            }
+            
         }
-        else if (arrow.localEulerAngles.z < maxThreshold) {
-            Debug.Log("Overfed");
-        }
+        yield return new WaitForSeconds(3.5f);
+        Debug.Log("Press Space");
+        yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
         ResetValues();
         UnhideButtons();
     }
@@ -164,9 +230,18 @@ public class MinigameScript : MonoBehaviour
         isInMinigame = false;
         isFeederMinigame = false;
         isDrinkerMinigame = false;
+        maxReached = false;
         minigameSpeed = 0;
         runningSpeed = 0;
+        minimumTarget = 0;
+        maximumTarget = 0;
+        targetAmount = 0;
+        sliderSpeed = 0;
+        sliderIncreasing = 0;
+        drinkerSlider.value = drinkerSlider.minValue;
+        Debug.Log(drinkerSlider.value);
         feedingMinigameScreen.SetActive(false);
+        drinkingMinigameScreen.SetActive(false);
     }
 
     /*IEnumerator FeederMinigame() {
