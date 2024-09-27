@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
+using TMPro;
 
 public class MinigameScript : MonoBehaviour
 {
@@ -28,16 +29,20 @@ public class MinigameScript : MonoBehaviour
     [SerializeField] float minThresholdAddition;
     [SerializeField] float maxThresholdAddition;
     [SerializeField, Range(2, 5)] float speedMultiplier;
+    [SerializeField] float plusMinusThreshold;
     float minigameSpeed = 0.0f;
     float runningSpeed;
-
     float threshold;
     float minThreshold;
     float maxThreshold;
+    float beforeMinThreshold;
+    float afterMaxThreshold;
 
     [Header("Feeder Minigame Assets")]
     [SerializeField] RectTransform arrow;
     [SerializeField] RectTransform threeColors;
+    [SerializeField] TextMeshProUGUI feederMinigameText;
+    [SerializeField] TextMeshProUGUI feederInstructions;
 
     [Header("Drinker Minigame Parameters")]
     [SerializeField] float minimumWater;
@@ -57,10 +62,16 @@ public class MinigameScript : MonoBehaviour
     [Header("Drinker Asset")]
     [SerializeField] Slider drinkerSlider;
     [SerializeField] RectTransform drinkerTarget;
+    [SerializeField] TextMeshProUGUI drinkerMinigameText;
+    [SerializeField] TextMeshProUGUI drinkerInstructions;
+
+    [SerializeField]float beforeMinigameStarts;
 
     bool isSpacePressed;
     bool isFeederMinigame;
     bool isDrinkerMinigame;
+    bool isFeederReady;
+    bool isDrinkerReady;
 
     [HideInInspector] public bool isInMinigame;
 
@@ -84,14 +95,14 @@ public class MinigameScript : MonoBehaviour
     }
 
     private void Update() {
-        if (isFeederMinigame) {
+        if (isFeederMinigame && isFeederReady) {
             FeederMinigame();
             if (arrow != null) {
                 //Debug.Log(minigameSpeed);
                 arrow.localEulerAngles = new Vector3(0, 0, Mathf.Lerp(minArrowAngle, maxArrowAngle, minigameSpeed / maxArrowAngle));
             }
         }
-        if (isDrinkerMinigame) {
+        if (isDrinkerMinigame && isDrinkerReady) {
             DrinkerMinigame();
             if (!maxReached) {
                 drinkerSlider.value = Mathf.Lerp(minimumWater, maximumWater, sliderSpeed / maximumWater);
@@ -106,9 +117,9 @@ public class MinigameScript : MonoBehaviour
         if (whatGame == "feeder") {
             isFeederMinigame = true;
             isSpacePressed = false;
-            threshold = Random.Range(maxArrowAngle + maxThresholdAddition, minArrowAngle - minThresholdAddition);
-            minThreshold = threshold - 10f;
-            maxThreshold = threshold + 10f;
+            threshold = Random.Range(maxArrowAngle + 25, minArrowAngle - 25);
+            minThreshold = threshold - minThresholdAddition;
+            maxThreshold = threshold + maxThresholdAddition;
             
             if (minThreshold < maxArrowAngle) {
                 minThreshold = maxArrowAngle;
@@ -119,7 +130,6 @@ public class MinigameScript : MonoBehaviour
             threeColors.localEulerAngles = new Vector3(0, 0, threshold);
             feedingMinigameScreen.SetActive(true);
         }
-        //Debug.Log("Threshold: " + threshold + "Minimum Threshold: " + max);
         else if (whatGame == "drinker") {
             isDrinkerMinigame = true;
             targetAmount = Random.Range(minimumRandom, maximumRandom);
@@ -132,7 +142,7 @@ public class MinigameScript : MonoBehaviour
             drinkerTarget.localPosition = new Vector3(targetPositionX, targetAmount, 0);
             drinkingMinigameScreen.SetActive(true);
         }
-        //StartCoroutine(Waiting());
+        StartCoroutine(Waiting());
     }
 
     void HideButtons() {
@@ -148,7 +158,8 @@ public class MinigameScript : MonoBehaviour
     }
 
     void FeederMinigame() {
-        if (Input.GetKeyDown(KeyCode.Space)) {
+        if (Input.GetKeyDown(KeyCode.Space) && isFeederReady) {
+            Debug.Log("I am Called");
             isSpacePressed = true;
             StartCoroutine(ResultsDisplay());
         }
@@ -159,21 +170,30 @@ public class MinigameScript : MonoBehaviour
         }
 
         if (!isSpacePressed && minigameSpeed <= maxArrowAngle) {
-            arrow.localEulerAngles = new Vector3(0, 0, maxArrowAngle);
+            Debug.Log("I am Called");
+            isSpacePressed = true;
             StartCoroutine(ResultsDisplay());
         }
     }
 
-    /*IEnumerator Waiting() {
+    IEnumerator Waiting() {
         if (isFeederMinigame) {
-            while (!isSpacePressed || minigameSpeed < maxArrowAngle) {
-                yield return null;
-            }
+            feederMinigameText.text = "Ready!";
+            feederInstructions.text = "Fill the Feeder with just the right amount.";
+            yield return new WaitForSeconds(beforeMinigameStarts);
+            feederMinigameText.text = "Filling the Feeder...";
+            feederInstructions.text = "Press the Space key at the right time.";
+            isFeederReady = true;
         }
         if (isDrinkerMinigame) {
-            yield return new WaitUntil(() => Input.GetKeyUp(KeyCode.Space) || maxReached);
+            drinkerMinigameText.text = "Ready!";
+            drinkerInstructions.text = "Fill the Drinker with just the right amount.";
+            yield return new WaitForSeconds(beforeMinigameStarts);
+            drinkerMinigameText.text = "Filling the Drinker...";
+            drinkerInstructions.text = "Hold the Space key and release it at the right time.";
+            isDrinkerReady = true;
         }
-    }*/
+    }
 
     void DrinkerMinigame() {
         if (Input.GetKey(KeyCode.Space)) {
@@ -196,31 +216,61 @@ public class MinigameScript : MonoBehaviour
 
     IEnumerator ResultsDisplay() {
         if (isFeederMinigame) {
-            if (arrow.localEulerAngles.z >= threeColors.localEulerAngles.z - minThresholdAddition && arrow.localEulerAngles.z <= threeColors.localEulerAngles.z - maxThresholdAddition) {
-                Debug.Log("Just Right");
+            feederInstructions.text = "";
+            if (arrow.localEulerAngles.z > 0 && arrow.localEulerAngles.z < 90) {
+                if (threeColors.localEulerAngles.z > 0 && threeColors.localEulerAngles.z < 90) {
+                    if (arrow.localEulerAngles.z >= threeColors.localEulerAngles.z - minThresholdAddition && arrow.localEulerAngles.z <= threeColors.localEulerAngles.z - maxThresholdAddition) {
+                        feederMinigameText.text = "Just Right!";
+                    }
+                    else if (arrow.localEulerAngles.z < threeColors.localEulerAngles.z - minThresholdAddition) {
+                        feederMinigameText.text = "Way Too Much!";
+                    }
+                    else if ((arrow.localEulerAngles.z > threeColors.localEulerAngles.z + maxThresholdAddition)) {
+                        feederMinigameText.text = "Way Too Few!";
+                    }
+                }
+                else if ((threeColors.localEulerAngles.z > 270 && threeColors.localEulerAngles.z < 360)) {
+                    feederMinigameText.text = "Way Too Few!";
+                }
             }
-            else if (arrow.localEulerAngles.z > minThreshold) {
-                Debug.Log("Underfed");
+
+            else if (arrow.localEulerAngles.z > 270 && arrow.localEulerAngles.z < 360) {
+                if (threeColors.localEulerAngles.z > 0 && threeColors.localEulerAngles.z < 90) {
+                    feederMinigameText.text = "Way Too Much!";
+                }
+                else if (threeColors.localEulerAngles.z > 270 && threeColors.localEulerAngles.z < 360) {
+                    if (arrow.localEulerAngles.z >= threeColors.localEulerAngles.z - minThresholdAddition && arrow.localEulerAngles.z <= threeColors.localEulerAngles.z - maxThresholdAddition) {
+                        feederMinigameText.text = "Just Right!";
+                    }
+                    else if (arrow.localEulerAngles.z < threeColors.localEulerAngles.z - minThresholdAddition) {
+                        feederMinigameText.text = "Way Too Much!";
+                    }
+                    else if ((arrow.localEulerAngles.z > threeColors.localEulerAngles.z + maxThresholdAddition)) {
+                        feederMinigameText.text = "Way Too Few!";
+                    }
+                }
             }
-            else if (arrow.localEulerAngles.z < maxThreshold) {
-                Debug.Log("Overfed");
-            }
+            isFeederReady = false;
+            yield return new WaitForSeconds(3.5f);
+            feederInstructions.text = "Press Space to Continue...";
+            //Debug.Log(isSpacePressed);
         }
         else if (isDrinkerMinigame) {
+            drinkerInstructions.text = "";
             if (drinkerSlider.value >= minimumTarget && drinkerSlider.value <= maximumTarget) {
-                Debug.Log("Just Right");
+                drinkerMinigameText.text = "Just Right!";
             }
             else if (drinkerSlider.value < minimumTarget) {
-                Debug.Log("Underhydrated");
+                drinkerMinigameText.text = "Way Too Few!";
             }
             else if (drinkerSlider.value > maximumTarget) {
-                Debug.Log("Overhydrated");
+                drinkerMinigameText.text = "Way Too Much!";
             }
-            
+            yield return new WaitForSeconds(3.5f);
+            drinkerInstructions.text = "Press Space to Continue...";
         }
-        yield return new WaitForSeconds(3.5f);
-        Debug.Log("Press Space");
         yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
+        //Debug.Log("Arrow Speed: " + minigameSpeed + " Max Arrow Angle: " + maxArrowAngle + " Is Arrow Speed <= maxArrowAngle?: " + (minigameSpeed <= maxArrowAngle));
         ResetValues();
         UnhideButtons();
     }
@@ -230,6 +280,8 @@ public class MinigameScript : MonoBehaviour
         isInMinigame = false;
         isFeederMinigame = false;
         isDrinkerMinigame = false;
+        isDrinkerReady = false;
+        isSpacePressed = false;
         maxReached = false;
         minigameSpeed = 0;
         runningSpeed = 0;
@@ -238,17 +290,9 @@ public class MinigameScript : MonoBehaviour
         targetAmount = 0;
         sliderSpeed = 0;
         sliderIncreasing = 0;
+        arrow.localEulerAngles = new Vector3 (0 ,0 ,90);
         drinkerSlider.value = drinkerSlider.minValue;
-        Debug.Log(drinkerSlider.value);
         feedingMinigameScreen.SetActive(false);
         drinkingMinigameScreen.SetActive(false);
     }
-
-    /*IEnumerator FeederMinigame() {
-        yield return StartCoroutine(ResultsDisplay());
-    }
-
-    IEnumerator DrinkerMinigame() {
-        yield return StartCoroutine(ResultsDisplay());
-    }*/
 }

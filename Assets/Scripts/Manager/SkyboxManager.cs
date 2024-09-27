@@ -58,7 +58,7 @@ public class SkyboxManager : MonoBehaviour
             if (!minigameScript.isInMinigame) {
                 timer -= Time.deltaTime;
                 DayNightCycle(timer / startTimer);
-                Debug.Log(timer);
+                
             }
             yield return null;
         } while (timer > 0);
