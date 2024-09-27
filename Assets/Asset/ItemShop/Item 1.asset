@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4f6c045f6271df4f936b54aede1b1ee, type: 3}
+  m_Name: Item 1
+  m_EditorClassIdentifier: 
+  <isStackable>k__BackingField: 1
+  <itemName>k__BackingField: Chick
+  <itemDescription>k__BackingField: 2-4 weeks old
+  <itemPrice>k__BackingField: 100
+  <itemAmount>k__BackingField: 1
+  <itemSprite>k__BackingField: {fileID: 21300000, guid: 776cc379318e40a43a43d311bf097862,
+    type: 3}
