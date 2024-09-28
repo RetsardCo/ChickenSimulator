@@ -5,8 +5,9 @@ using UnityEngine;
 
 public class PlayerDetectorScript : MonoBehaviour
 {
-    [SerializeField]GameManager gameManager;
-    [SerializeField]MinigameScript gameScript;
+    [SerializeField] GameManager gameManager;
+    [SerializeField] MinigameScript gameScript;
+    [SerializeField] StorylineScript storylineScript;
 
     FeederScript feederScript;
     DrinkerScript drinkerScript;
@@ -37,16 +38,34 @@ public class PlayerDetectorScript : MonoBehaviour
         if (other.CompareTag("Feed")) {
             feederDetected = true;
             feederScript = other.GetComponent<FeederScript>();
+            if (gameManager.days == 1) {
+                storylineScript.whatLinesToDeliver = "feeder";
+                StartCoroutine(storylineScript.TypeLine());
+            }
         }
 
         if (other.CompareTag("Drinker")) {
             drinkerDetected = true;
             drinkerScript = other.GetComponent<DrinkerScript>();
+            if (gameManager.days == 1) {
+                storylineScript.whatLinesToDeliver = "drinker";
+                StartCoroutine(storylineScript.TypeLine());
+            }
         }
 
         if (other.CompareTag("Poop")) {
             poopDetected = true;
             poopScript = other.GetComponent<PoopScript>();
+            if (gameManager.days == 1) {
+                Debug.Log("I am Called");
+                storylineScript.whatLinesToDeliver = "poop";
+                StartCoroutine(storylineScript.TypeLine());
+            }
+        }
+
+        if (other.CompareTag("ExitArea")) {
+            storylineScript.whatLinesToDeliver = "escape";
+            StartCoroutine(storylineScript.TypeLine());
         }
     }
 

@@ -7,195 +7,310 @@ using UnityEngine.SceneManagement;
 
 public class StorylineScript : MonoBehaviour
 {
-    /*[SerializeField] PlayerScript playerScript;
-    [SerializeField] StatsController statsController;
-    [SerializeField] ProteinAmountController proteinAmountController;*/
-
     [SerializeField] GameObject storylineCanvas;
     [SerializeField] GameObject nameReveal;
     [SerializeField] TextMeshProUGUI storyText;
-    [SerializeField] Button nextButton;
-    [SerializeField] Button acceptButton;
-    [SerializeField] TMP_InputField nameInput;
+    [SerializeField, Range(0.01f, 0.1f)] float textSpeed;
+    [SerializeField] GameManager gameManager;
 
-    [SerializeField] GameObject gameOverScreen;
+    [HideInInspector] public bool storyOngoing;
+    [HideInInspector] public bool allTutorialsFinished;
+    [HideInInspector] public bool lockedDialogue;
+    [HideInInspector] public bool dialogueEnding;
+    bool stopClicking;
 
-    bool storyNext;
-    bool storyOngoing;
+    [SerializeField] string[] dayOneTutorialDialogues;
     int currentStory;
 
-    string currentName;
+    [Header("Poop Cleaning Tutorial Dialogue")]
+    [SerializeField] string[] poopCleanupDialogue;
+    [SerializeField] string[] poopPickupDialogue;
+    [HideInInspector] public bool needToCleanPoop;
+    [HideInInspector] public int poopStory;
+
+    [Header("Feeder Tutorial Dialogue")]
+    [SerializeField] string[] feederTutorialDialogue;
+    [SerializeField] string[] feederJustRightDialogue;
+    [SerializeField] string[] feederTooMuchDialogue;
+    [SerializeField] string[] feederTooLittleDialogue;
+    [HideInInspector] public int feederStory;
+
+    [Header("Drinker Tutorial Dialogue")]
+    [SerializeField] string[] drinkerTutorialDialogue;
+    [SerializeField] string[] drinkerJustRightDialogue;
+    [SerializeField] string[] drinkerTooLittleDialogue;
+    [SerializeField] string[] drinkerTooMuchDialogue;
+    [HideInInspector] public int drinkerStory;
+
+    [Header("Going Beyond Dialogue")]
+    [SerializeField] string[] whereAreYouGoingDialogue;
+    [HideInInspector] public int whereStory;
+
+    string currentDialogue;
+
+    [HideInInspector] public string whatLinesToDeliver;
+
+    //string currentName;
 
     private void Awake() {
         nameReveal.SetActive(false);
         storyText.text = "";
-        acceptButton.gameObject.SetActive(false);
-        nameInput.gameObject.SetActive(false);
+        //acceptButton.gameObject.SetActive(false);
+        //nameInput.gameObject.SetActive(false);
         storylineCanvas.SetActive(false);
-        gameOverScreen.SetActive(false);
+        //gameOverScreen.SetActive(false);
     }
 
     private void Start() {
-        StartCoroutine(StoryStart());
+        ResetAllLines();
+        storyOngoing = false;
+        lockedDialogue = true;
+        currentDialogue = string.Empty;
+        nameReveal.SetActive(false);
+        //StartCoroutine(TutorialStory());
     }
 
-    IEnumerator StoryStart() {
-        currentStory = 0;
-        yield return new WaitForSeconds(2f);
-        storylineCanvas.SetActive(true);
-        yield return new WaitForSeconds(1f);
-        storyOngoing = true;
-        while (storyOngoing) {
-            if (currentStory == 0) {
-                storyText.text = "Hi! Welcome!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 1) {
-                storyText.text = "You must be a newcomer.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 2) {
-                storyText.text = "Well, you're in Mukimuki City, the largest gym in the City.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 3) {
-                storyText.text = "What's your name?";
-                nextButton.gameObject.SetActive(false);
-                yield return new WaitForSeconds(3f);
-                nameInput.gameObject.SetActive(true);
-                acceptButton.gameObject.SetActive(true);
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 4) {
-                nameInput.gameObject.SetActive(false);
-                acceptButton.gameObject.SetActive(false);
-                nextButton.gameObject.SetActive(true);
-                //storyText.text = "So, you're " + statsController.playerName + ", huh?";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 5) {
-                storyText.text = "My name is Dionathan, the most popular guy in this gym.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 6) {
-                nameReveal.SetActive(true);
-                storyText.text = "Feel free to do whatever you want around here.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 7) {
-                storyText.text = "You can take a shot at my popularity, but who are we kidding here?";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 8) {
-                storyText.text = "You? Taking a shot at my popularity?";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 9) {
-                storyText.text = "...";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 10) {
-                storyText.text = "I'm just bantering with you.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 11) {
-                storyText.text = "As a sign of good gesture, take these.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 12) {
-                storyText.text = "5 Regular Protein, and a Steroid. On the house.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 13) {
-                storyText.text = "Anyway, let's talk again later!";
-                yield return new WaitForSeconds(1f);
+    private void Update() {
+        if ((Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)) && !gameManager.isInTransition && !stopClicking) {
+            if (storyText.text == currentDialogue) {
+                if (whatLinesToDeliver == "tutorial") {
+                    if (currentStory == 5) {
+                        StartCoroutine(MovementTutorial());
+                        currentDialogue = string.Empty;
+                        storyText.text = string.Empty;
+                        currentStory++;
+                    }
+                    else if (currentStory == 7 || currentStory == 9) {
+                        HideDialogue();
+                        currentDialogue = string.Empty;
+                        storyText.text = string.Empty;
+                        currentStory++;
+                    }
+                    else if (currentStory > 9 && lockedDialogue) {
+                        allTutorialsFinished = false;
+                    }
+                    else {
+                        NextLine();
+                    }
+                }
+                else if(whatLinesToDeliver == "poop"){
+                    if (poopStory > poopCleanupDialogue.Length - 1) {
+                        HideDialogue();
+                    }
+                    else {
+                        NextLine();
+                    }
+                }
+                else {
+                    NextLine();
+                }
             }
             else {
-                storylineCanvas.SetActive(false);
-                break;
+                StopAllCoroutines();
             }
-            yield return new WaitUntil(() => storyNext);
-            currentStory++;
         }
     }
 
-    public IEnumerator EndingStory() {
-        storyText.text = "";
+    void ResetAllLines() {
         currentStory = 0;
-        yield return new WaitForSeconds(2f);
-        storylineCanvas.SetActive(true);
-        yield return new WaitForSeconds(1f);
+        poopStory = 0;
+        drinkerStory = 0;
+        feederStory = 0;
+        whereStory = 0;
+    }
+
+    public IEnumerator TypeLine() {
         storyOngoing = true;
-        while (storyOngoing) {
-            if (currentStory == 0) {
-                //storyText.text = "You have come a long way, " + statsController.playerName + ".";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 1) {
-                storyText.text = "Look at you! You have improved!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 2) {
-                storyText.text = "And you have out-popularized me!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 3) {
-                storyText.text = "Great job!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 4) {
-                storyText.text = "With that said, I'm stepping down my throne.";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 5) {
-                storyText.text = "Enjoy your stay as the king of Mukimuki City!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 6) {
-                storyText.text = "Again, great job!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if (currentStory == 7) {
-                storyText.text = "And Congratulations!";
-                yield return new WaitForSeconds(1f);
-            }
-            else if(currentStory == 8) {
-                storylineCanvas.SetActive(false);
-                gameOverScreen.SetActive(true);
-                break;
-            }
-            yield return new WaitUntil(() => storyNext);
-            currentStory++;
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        storylineCanvas.SetActive(true);
+        if (whatLinesToDeliver == "tutorial") {
+            currentDialogue = dayOneTutorialDialogues[currentStory];
         }
-    }
-
-    public void NextCalled() {
-        StartCoroutine(ProceedStory());
-    }
-
-    public void BackToMainMenuCalled() {
-        SceneManager.LoadScene("MainMenu");
-    }
-
-    public void AcceptCalled() {
-        GrabFromInputField();
-        if (currentName == "") {
-            storyText.text = "I'm sure you have a name, right?";
-            return;
+        else if (whatLinesToDeliver == "poop") {
+            currentDialogue = poopCleanupDialogue[poopStory];
         }
-        else {
-            //statsController.playerName = currentName;
+        else if (whatLinesToDeliver == "feeder") {
+            currentDialogue = feederTutorialDialogue[feederStory];
         }
-        StartCoroutine(ProceedStory());
+        else if (whatLinesToDeliver == "drinker") {
+            currentDialogue = drinkerTutorialDialogue[drinkerStory];
+        }
+        else if (whatLinesToDeliver == "escape") {
+            currentDialogue = whereAreYouGoingDialogue[whereStory];
+        }
+        else if (whatLinesToDeliver == "poopCleanUp") {
+            poopStory = 0;
+            currentDialogue = poopPickupDialogue[poopStory];
+        }
+        else if(whatLinesToDeliver == "feederRight") {
+            feederStory = 0;
+            currentDialogue = feederJustRightDialogue[feederStory];
+        }
+        else if (whatLinesToDeliver == "feederLow") {
+            feederStory = 0;
+            currentDialogue = feederTooLittleDialogue[feederStory];
+        }
+        else if (whatLinesToDeliver == "feederHigh") {
+            feederStory = 0;
+            currentDialogue = feederTooMuchDialogue[feederStory];
+        }
+        else if (whatLinesToDeliver == "drinkerRight") {
+            drinkerStory = 0;
+            currentDialogue = drinkerJustRightDialogue[feederStory];
+        }
+        else if (whatLinesToDeliver == "drinkerLow") {
+            drinkerStory = 0;
+            currentDialogue = drinkerTooLittleDialogue[feederStory];
+        }
+        else if (whatLinesToDeliver == "drinkerHigh") {
+            drinkerStory = 0;
+            currentDialogue = drinkerTooMuchDialogue[feederStory];
+        }
+        stopClicking = true;
+        foreach (char c in currentDialogue.ToCharArray()) {
+            storyText.text += c;
+            yield return new WaitForSeconds(textSpeed);
+        }
+        stopClicking = false;
     }
 
-    private void GrabFromInputField() {
-        currentName = nameInput.text;
+    void NextLine() {
+        if (whatLinesToDeliver == "tutorial") {
+            if (currentStory < dayOneTutorialDialogues.Length - 1) {
+                if (lockedDialogue && !allTutorialsFinished) {
+
+                }
+                currentStory++;
+            }
+            else {
+                HideDialogue();
+                gameManager.SpecialCallEndOfDay();
+            }
+
+            if (currentStory == 2) {
+                nameReveal.SetActive(true);
+            }
+            
+        }
+        else if (whatLinesToDeliver == "poop") {
+            if (poopStory < poopCleanupDialogue.Length - 1) {
+                poopStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "feeder") {
+            if (feederStory < feederTutorialDialogue.Length - 1) {
+                feederStory++;
+            }
+            else {
+                HideDialogue();
+            }
+
+            if (feederStory == 3) {
+                HideDialogue();
+                //feederStory++;
+            }
+        }
+        else if (whatLinesToDeliver == "drinker") {
+            if (drinkerStory < drinkerTutorialDialogue.Length - 1) {
+                drinkerStory++;
+            }
+            else {
+                HideDialogue();
+            }
+
+            if (drinkerStory == 2) {
+                HideDialogue();
+                //drinkerStory++;
+            }
+        }
+        else if (whatLinesToDeliver == "escape") {
+            if (whereStory < whereAreYouGoingDialogue.Length - 1) {
+                whereStory++;
+            }
+            else {
+                whereStory = 0;
+                currentDialogue = string.Empty;
+                HideDialogue();
+                StartCoroutine(gameManager.ResetPlayerLocation(2.5f, false));
+            }
+        }
+        else if (whatLinesToDeliver == "poopCleanUp") {
+            if (poopStory < poopPickupDialogue.Length - 1) {
+                poopStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "feederRight") {
+            if (feederStory < feederJustRightDialogue.Length - 1) {
+                feederStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "feederLow") {
+            if (feederStory < feederTooLittleDialogue.Length - 1) {
+                feederStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "feederHigh") {
+            if (feederStory < feederTooMuchDialogue.Length - 1) {
+                feederStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "drinkerRight") {
+            if (drinkerStory < drinkerJustRightDialogue.Length - 1) {
+                drinkerStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "drinkerLow") {
+            if (drinkerStory < drinkerTooLittleDialogue.Length - 1) {
+                drinkerStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        else if (whatLinesToDeliver == "drinkerHigh") {
+            if (drinkerStory < drinkerTooMuchDialogue.Length - 1) {
+                drinkerStory++;
+            }
+            else {
+                HideDialogue();
+            }
+        }
+        storyText.text = string.Empty;
+        StartCoroutine(TypeLine());
+        
     }
 
-    IEnumerator ProceedStory() {
-        storyNext = true;
-        yield return new WaitForSeconds(0.5f);
-        storyNext = false;
+    IEnumerator MovementTutorial() {
+        HideDialogue();
+        yield return new WaitForSeconds(5f);
+        storyOngoing = true;
+        storylineCanvas.SetActive(true);
+        StartCoroutine(TypeLine());
+    }
+
+    void HideDialogue() {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        storylineCanvas.SetActive(false);
+        storyOngoing = false;
     }
 }

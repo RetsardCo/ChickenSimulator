@@ -25,6 +25,7 @@ public class PlayerMovement : MonoBehaviour
 
     [SerializeField] MinigameScript minigameScript;
     [SerializeField] GameManager gameManager;
+    [SerializeField] StorylineScript storylineScript;
 
     void Awake()
     {
@@ -40,7 +41,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        if (!gameManager.isPaused && !minigameScript.isInMinigame) {
+        if (!gameManager.isPaused && !minigameScript.isInMinigame && !storylineScript.storyOngoing && !gameManager.isInTransition) {
             Move();
         }
         Animate();

@@ -6,10 +6,12 @@ using UnityEngine.UI;
 public class SkyboxManager : MonoBehaviour
 {
     [SerializeField] float startTimer = 120f;
-    [SerializeField] Material skyboxMaterial;
+    Material skyboxMaterial;
     [SerializeField] Light directionalLight;
 
     [SerializeField] MinigameScript minigameScript;
+    [SerializeField] StorylineScript storylineScript;
+    [SerializeField] GameManager gameManager;
 
     Color currentSkyColor;
     Color currentFogColor;
@@ -55,10 +57,9 @@ public class SkyboxManager : MonoBehaviour
         }*/
 
         do {
-            if (!minigameScript.isInMinigame) {
+            if (!minigameScript.isInMinigame && !storylineScript.storyOngoing && !gameManager.isMenuActive) {
                 timer -= Time.deltaTime;
                 DayNightCycle(timer / startTimer);
-                
             }
             yield return null;
         } while (timer > 0);

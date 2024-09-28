@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    int days = 1;
+    [HideInInspector] public int days = 1;
     [HideInInspector] public int feedScore, drinkScore, cleanScore, medicateScore;
     [HideInInspector] public int feedMax, drinkMax, cleanMax, medicateMax;
     
@@ -30,16 +30,20 @@ public class GameManager : MonoBehaviour
     [SerializeField] Animator bgAnimator;
 
     [HideInInspector] public bool isPaused;
+    [HideInInspector] public bool isInTransition;
+    [HideInInspector] public bool isMenuActive;
+
+    [SerializeField] StorylineScript storylineScript;
+    [SerializeField] Transform spawnPoint;
+    [SerializeField] Transform playerLocation;
 
     List<string> daily;
     string[] missions;
 
-    bool isMenuActive;
-
     private void Start() {
         isPaused = false;
         daily = new List<string>();
-        missions = new string[] { "feed", "drink", "medicate", "clean"};
+        missions = new string[] { "feed", "drink",/* "medicate",*/ "clean"};
         missionsBox.SetActive(false);
         isMenuActive = false;
         StartCoroutine(GameCycle());
@@ -55,14 +59,15 @@ public class GameManager : MonoBehaviour
             if (!isMenuActive) {
                 missionsBox.SetActive(true);
                 isMenuActive = true;
-                Time.timeScale = 0f;
+                if (days == 1) {
+                    StartCoroutine(storylineScript.TypeLine());
+                }
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
             }
             else if (isMenuActive) {
                 missionsBox.SetActive(false);
                 isMenuActive = false;
-                Time.timeScale = 1f;
                 Cursor.visible = false;
                 Cursor.lockState = CursorLockMode.Locked;
             }
@@ -84,19 +89,51 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void PoopCount() {
-        cleanScore++;
-        GoalFind("clean");
+    private IEnumerator GameCycle() {
+        for (; ; ) {
+            yield return StartCoroutine(StartOfDay());
+            yield return StartCoroutine(EndOfDay());
+            yield return new WaitForSeconds(1f);
+        }
+        
     }
 
-    public void FeedCount() {
-        feedScore++;
-        GoalFind("feed");
+    private IEnumerator StartOfDay() {
+        DayStart();
+        missionsBox.SetActive(false);
+        StartCoroutine(ResetPlayerLocation(0.1f, true));
+        dayLabel.text = "Day " + days.ToString();
+        isInTransition = true;
+        textAnimator.SetTrigger("StartOfDayEnter");
+        yield return new WaitForSeconds(5f);
+        textAnimator.SetTrigger("StartOfDayExit");
+        bgAnimator.SetTrigger("BGFadeOut");
+        isInTransition = false;
+        StartCoroutine(BGDisappear());
+        if (days == 1) {
+            yield return new WaitForSeconds(2f);
+            storylineScript.whatLinesToDeliver = "tutorial";
+            StartCoroutine(storylineScript.TypeLine());
+        }
+        yield return StartCoroutine(skyboxManager.DayNight());
+        //Time.timeScale = 1f;
     }
 
-    public void DrinkCount() {
-        drinkScore++;
-        GoalFind("drink");
+    public void SpecialCallEndOfDay() {
+        StartCoroutine(EndOfDay());
+    }
+
+    private IEnumerator EndOfDay() {
+        missionsBox.SetActive(false);
+        bg.enabled = true;
+        dayLabel.text = "Day " + days.ToString() + " ended.";
+        ResetAllScores();
+        textAnimator.SetTrigger("StartOfDayEnter");
+        yield return new WaitForSeconds(2.5f);
+        bgAnimator.SetTrigger("BGFadeIn");
+        yield return new WaitForSeconds(2.5f);
+        textAnimator.SetTrigger("StartOfDayExit");
+        days++;
     }
 
     void GoalFind(string goal) {
@@ -124,39 +161,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator GameCycle() {
-        for (; ; ) {
-            yield return StartCoroutine(StartOfDay());
-            yield return StartCoroutine(EndOfDay());
-            yield return new WaitForSeconds(1f);
+    public IEnumerator ResetPlayerLocation(float waitTime, bool comingFromGameManager) {
+        if (!comingFromGameManager) {
+            bgAnimator.SetTrigger("BGFadeIn");
         }
-        
+        yield return new WaitForSeconds(waitTime);
+        playerLocation.transform.position = spawnPoint.transform.position;
+        if (!comingFromGameManager) {
+            bgAnimator.SetTrigger("BGFadeOut");
+        }
     }
 
-    private IEnumerator StartOfDay() {
-        DayStart();
-        missionsBox.SetActive(false);
-        dayLabel.text = "Day " + days.ToString();
-        //textAnimator.SetTrigger("StartOfDayEnter");
-        yield return new WaitForSeconds(5f);
-        //textAnimator.SetTrigger("StartOfDayExit");
-        //bgAnimator.SetTrigger("BGFadeOut");
-        StartCoroutine(BGDisappear());
-       yield return StartCoroutine(skyboxManager.DayNight());
-        //Time.timeScale = 1f;
+    public void PoopCount() {
+        cleanScore++;
+        GoalFind("clean");
     }
 
-    private IEnumerator EndOfDay() {
-        missionsBox.SetActive(false);
-        bg.enabled = true;
-        dayLabel.text = "Day " + days.ToString() + " ended.";
-        ResetAllScores();
-        //textAnimator.SetTrigger("StartOfDayEnter");
-        yield return new WaitForSeconds(2.5f);
-        //bgAnimator.SetTrigger("BGFadeIn");
-        yield return new WaitForSeconds(2.5f);
-        //textAnimator.SetTrigger("StartOfDayExit");
-        days++;
+    public void FeedCount() {
+        feedScore++;
+        GoalFind("feed");
+    }
+
+    public void DrinkCount() {
+        drinkScore++;
+        GoalFind("drink");
     }
 
     IEnumerator BGDisappear() {
@@ -182,7 +210,8 @@ public class GameManager : MonoBehaviour
                     }
                 }
                 holder.Add(checker);
-                *//*int j = i - 1;
+                */
+            /*int j = i - 1;
                 while (true) {
                     if (holder[j] == checker) {
                         checker = AddMissions();
@@ -191,7 +220,8 @@ public class GameManager : MonoBehaviour
                         holder[i] = checker;
                         break;
                     }
-                }*//*
+                }*/
+            /*
             }
             else {
                 holder.Add(checker);

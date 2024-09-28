@@ -16,6 +16,7 @@ TagManager:
   - Drinker
   - PlayerDetector
   - GameManager
+  - ExitArea
   layers:
   - Default
   - TransparentFX

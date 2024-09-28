@@ -12,6 +12,9 @@ public class MinigameScript : MonoBehaviour
     [SerializeField] GameObject feedingMinigameScreen;
     [SerializeField] GameObject drinkingMinigameScreen;
 
+    [SerializeField] StorylineScript storylineScript;
+    [SerializeField] GameManager gameManager;
+
     [SerializeField] Button settingsButton;
     [SerializeField] Button missionsButton;
     [SerializeField] Button inventoryButton;
@@ -35,8 +38,6 @@ public class MinigameScript : MonoBehaviour
     float threshold;
     float minThreshold;
     float maxThreshold;
-    float beforeMinThreshold;
-    float afterMaxThreshold;
 
     [Header("Feeder Minigame Assets")]
     [SerializeField] RectTransform arrow;
@@ -129,6 +130,10 @@ public class MinigameScript : MonoBehaviour
             }
             threeColors.localEulerAngles = new Vector3(0, 0, threshold);
             feedingMinigameScreen.SetActive(true);
+            if (gameManager.days == 1) {
+                storylineScript.whatLinesToDeliver = "feeder";
+                StartCoroutine(storylineScript.TypeLine());
+            }
         }
         else if (whatGame == "drinker") {
             isDrinkerMinigame = true;
@@ -141,6 +146,10 @@ public class MinigameScript : MonoBehaviour
             maximumTarget = targetAmount + addMinus;
             drinkerTarget.localPosition = new Vector3(targetPositionX, targetAmount, 0);
             drinkingMinigameScreen.SetActive(true);
+            if (gameManager.days == 1) {
+                storylineScript.whatLinesToDeliver = "feeder";
+                StartCoroutine(storylineScript.TypeLine());
+            }
         }
         StartCoroutine(Waiting());
     }
@@ -180,17 +189,27 @@ public class MinigameScript : MonoBehaviour
         if (isFeederMinigame) {
             feederMinigameText.text = "Ready!";
             feederInstructions.text = "Fill the Feeder with just the right amount.";
+            if (storylineScript.storyOngoing) {
+                while (storylineScript.storyOngoing) {
+                    yield return null;
+                }
+            }
             yield return new WaitForSeconds(beforeMinigameStarts);
             feederMinigameText.text = "Filling the Feeder...";
-            feederInstructions.text = "Press the Space key at the right time.";
+            feederInstructions.text = "Press the [Space] key at the right time.";
             isFeederReady = true;
         }
         if (isDrinkerMinigame) {
             drinkerMinigameText.text = "Ready!";
             drinkerInstructions.text = "Fill the Drinker with just the right amount.";
+            if (storylineScript.storyOngoing) {
+                while (storylineScript.storyOngoing) {
+                    yield return null;
+                }
+            }
             yield return new WaitForSeconds(beforeMinigameStarts);
             drinkerMinigameText.text = "Filling the Drinker...";
-            drinkerInstructions.text = "Hold the Space key and release it at the right time.";
+            drinkerInstructions.text = "Hold the [Space] key and release it at the right time.";
             isDrinkerReady = true;
         }
     }
@@ -250,6 +269,19 @@ public class MinigameScript : MonoBehaviour
                     }
                 }
             }
+
+            if (gameManager.days == 1) {
+                if (feederMinigameText.text == "Just Right!") {
+                    storylineScript.whatLinesToDeliver = "feederRight";
+                }
+                else if (feederMinigameText.text == "Way Too Much!") {
+                    storylineScript.whatLinesToDeliver = "feederHigh";
+                }
+                else if (feederMinigameText.text == "Way Too Few!") {
+                    storylineScript.whatLinesToDeliver = "feederLow";
+                }
+                yield return StartCoroutine(storylineScript.TypeLine());
+            }
             isFeederReady = false;
             yield return new WaitForSeconds(3.5f);
             feederInstructions.text = "Press Space to Continue...";
@@ -265,6 +297,18 @@ public class MinigameScript : MonoBehaviour
             }
             else if (drinkerSlider.value > maximumTarget) {
                 drinkerMinigameText.text = "Way Too Much!";
+            }
+            if (gameManager.days == 1) {
+                if (drinkerMinigameText.text == "Just Right!") {
+                    storylineScript.whatLinesToDeliver = "drinkerRight";
+                }
+                else if (drinkerMinigameText.text == "Way Too Much!") {
+                    storylineScript.whatLinesToDeliver = "drinkerHigh";
+                }
+                else if (drinkerMinigameText.text == "Way Too Few!") {
+                    storylineScript.whatLinesToDeliver = "drinkerLow";
+                }
+                yield return StartCoroutine(storylineScript.TypeLine());
             }
             yield return new WaitForSeconds(3.5f);
             drinkerInstructions.text = "Press Space to Continue...";

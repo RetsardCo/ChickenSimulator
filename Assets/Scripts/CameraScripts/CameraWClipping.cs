@@ -20,6 +20,7 @@ public class CameraWClipping : MonoBehaviour
 
     [SerializeField] GameManager gameManager;
     [SerializeField] MinigameScript minigameScript;
+    [SerializeField] StorylineScript storylineScript;
 
     private void Start() {
         Cursor.visible = false;
@@ -30,8 +31,8 @@ public class CameraWClipping : MonoBehaviour
     {
         Debug.Log("Is Paused: " + gameManager.isPaused);
         Debug.Log("Is in Minigame: " + minigameScript.isInMinigame);
-        if (!gameManager.isPaused && !minigameScript.isInMinigame)
-        {
+        if (!gameManager.isPaused && !minigameScript.isInMinigame && !storylineScript.storyOngoing 
+            && !gameManager.isInTransition && !gameManager.isMenuActive){
             currentX += Input.GetAxis("Mouse X") * rotationSpeed;
             currentY -= Input.GetAxis("Mouse Y") * rotationSpeed;
             currentY = Mathf.Clamp(currentY, -20f, 60f);
