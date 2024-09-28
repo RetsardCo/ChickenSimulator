@@ -12,4 +12,70 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f999259eb25eb974da5b24139e1e89a5, type: 3}
   m_Name: ListOfQuestions
   m_EditorClassIdentifier: 
-  questions: []
+  questions:
+  - questionText: What type of food is given to newly hatched chicks for up to six
+      weeks?
+    choices:
+    - Growing Mash
+    - Starting Mash
+    - Laying Mash
+    correctAnswerIndex: 1
+  - questionText: Which food is provided to chickens six weeks and older until they
+      start laying eggs?
+    choices:
+    - Growing Mash
+    - Starting Mash
+    - Laying Mash
+    correctAnswerIndex: 0
+  - questionText: 'What is "Laying mash" used for? '
+    choices:
+    - Feeding newly hatched chicks.
+    - Feeding chickens that are ready to be sold.
+    - Feeding chickens that are starting to lay eggs
+    correctAnswerIndex: 2
+  - questionText: 'Which type of chicken is raised primarily for egg production? '
+    choices:
+    - Layer
+    - Broiler
+    - Fryer
+    correctAnswerIndex: 0
+  - questionText: 'What should you do to keep the drinking water for chickens fresh
+      and clean? '
+    choices:
+    - Change water at least once daily.
+    - Add salt to the water.
+    - Change the water after a couple of days.
+    correctAnswerIndex: 0
+  - questionText: 'What type of chicken is raised primarily for meat, often used
+      in fast food restaurants? '
+    choices:
+    - Layer
+    - Broiler
+    - Native chicken
+    correctAnswerIndex: 1
+  - questionText: 'Why is ventilation important in chicken enclosures? '
+    choices:
+    - To prevent disease and keep the air fresh.
+    - To help the chickens sleep.
+    - To keep the food and water clean.
+    correctAnswerIndex: 0
+  - questionText: What material is recommended for the chicken feeder to prevent
+      spillage?
+    choices:
+    - Metal with at least four inches of depth.
+    - Plastic with a wide base.
+    - Glass with narrow openings.
+    correctAnswerIndex: 0
+  - questionText: Why is it important to keep chicken enclosures strong and durable?
+    choices:
+    - To keep the chickens warm.
+    - To prevent other animals from entering and eating the food.
+    - To prevent predators from entering and harming the chickens.
+    correctAnswerIndex: 2
+  - questionText: Which type of chicken is often used for meat products like chicken
+      nuggets?
+    choices:
+    - Broiler
+    - Fryer
+    - Native chicken
+    correctAnswerIndex: 0

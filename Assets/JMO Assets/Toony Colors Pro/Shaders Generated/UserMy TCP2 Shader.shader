@@ -22,12 +22,16 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		_Shadow_HSV_V ("Value", Range(-1,1)) = 0
 		[HideInInspector] __EndGroup ("Shadow HSV", Float) = 0
 		[MainTexture] _BaseMap ("Albedo", 2D) = "white" {}
+		[NoScaleOffset] _Occlusion ("Occlusion", 2D) = "white" {}
+		 _Occlusion1 ("Occlusion Float", Float) = 1
 		[TCP2Separator]
 
 		[TCP2Header(Ramp Shading)]
 		
-		_RampThreshold ("Threshold", Range(0.01,1)) = 0.5
-		_RampSmoothing ("Smoothing", Range(0.001,1)) = 0.5
+		[NoScaleOffset] _Ramp ("2D Ramp Texture (RGB)", 2D) = "gray" {}
+		_RampTextureOffset ("Ramp Offset", Range(0,1)) = 0.5
+		_RampTextureSize ("Ramp Size", Range(0.001,1)) = 1
+		_2DRampLerp ("2D Ramp Lerp", Range(0,1)) = 0
 		[TCP2Separator]
 		
 		[TCP2HeaderHelp(Specular)]
@@ -63,7 +67,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		
 		[TCP2HeaderHelp(Vertex Displacement)]
 		[Toggle(TCP2_VERTEX_DISPLACEMENT)] _UseVertexDisplacement ("Enable Vertex Displacement", Float) = 0
-		_DisplacementTex ("Displacement Texture", 2D) = "black" {}
+		_WorldDisplacementTex ("World Displacement Texture", 2D) = "black" {}
 		 _DisplacementStrength ("Displacement Strength", Range(-1,1)) = 0.01
 		[TCP2Separator]
 		
@@ -98,8 +102,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		[Toggle(TCP2_SKETCH)] _UseSketch ("Enable Sketch Effect", Float) = 0
 		_SketchTexture ("Sketch Texture", 2D) = "black" {}
 		_SketchTexture_OffsetSpeed ("Sketch Texture UV Offset Speed", Float) = 120
-		_SketchMin ("Sketch Min", Range(0,1)) = 0
-		_SketchMax ("Sketch Max", Range(0,1)) = 1
 		[TCP2Separator]
 		
 		[TCP2HeaderHelp(Wind)]
@@ -107,6 +109,14 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		_WindDirection ("Direction", Vector) = (1,0,0,0)
 		_WindStrength ("Strength", Range(0,0.2)) = 0.025
 		_WindSpeed ("Speed", Range(0,10)) = 2.5
+		
+		[TCP2HeaderHelp(Dissolve)]
+		[Toggle(TCP2_DISSOLVE)] _UseDissolve ("Enable Dissolve", Float) = 0
+		[NoScaleOffset] _DissolveMap ("Map", 2D) = "gray" {}
+		_DissolveValue ("Value", Range(0,1)) = 0.5
+		[NoScaleOffset] _DissolveGradientTexture ("Gradient Texture", 2D) = "gray" {}
+		_DissolveGradientWidth ("Ramp Width", Range(0,1)) = 0.2
+		[TCP2Separator]
 		
 		_SubsurfaceScreenSpaceInfluence ("Screen-space Influence", Range(0,10)) = 0.5
 
@@ -122,6 +132,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		{
 			"RenderPipeline" = "UniversalPipeline"
 			"RenderType"="Opaque"
+			"Queue"="AlphaTest"
 		}
 
 		HLSLINCLUDE
@@ -156,19 +167,23 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		// Uniforms
 
 		// Shader Properties
-		TCP2_TEX2D_WITH_SAMPLER(_DisplacementTex);
+		TCP2_TEX2D_WITH_SAMPLER(_WorldDisplacementTex);
 		TCP2_TEX2D_WITH_SAMPLER(_ParallaxMap);
 		TCP2_TEX2D_WITH_SAMPLER(_BumpMap);
 		TCP2_TEX2D_WITH_SAMPLER(_BlendingSource);
 		TCP2_TEX2D_WITH_SAMPLER(_BaseMap);
+		TCP2_TEX2D_WITH_SAMPLER(_DissolveMap);
+		TCP2_TEX2D_WITH_SAMPLER(_DissolveGradientTexture);
+		TCP2_TEX2D_WITH_SAMPLER(_Occlusion);
 		TCP2_TEX2D_WITH_SAMPLER(_StylizedThreshold);
 		TCP2_TEX2D_WITH_SAMPLER(_DiffuseTintMask);
 		TCP2_TEX2D_WITH_SAMPLER(_SketchTexture);
+		sampler2D _Ramp;
 
 		CBUFFER_START(UnityPerMaterial)
 			
 			// Shader Properties
-			float4 _DisplacementTex_ST;
+			float4 _WorldDisplacementTex_ST;
 			float _DisplacementStrength;
 			float _WindSpeed;
 			float4 _WindDirection;
@@ -180,11 +195,15 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			float _BumpScale;
 			float4 _BlendingContrast;
 			float4 _BaseMap_ST;
+			float _DissolveValue;
+			float _DissolveGradientWidth;
 			fixed4 _BaseColor;
+			float _Occlusion1;
 			half4 _Emission;
 			float4 _StylizedThreshold_ST;
-			float _RampThreshold;
-			float _RampSmoothing;
+			float _RampTextureOffset;
+			float _RampTextureSize;
+			float _2DRampLerp;
 			fixed4 _DiffuseTint;
 			float _ShadowLineThreshold;
 			float _ShadowLineStrength;
@@ -207,8 +226,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			float _Shadow_HSV_V;
 			float4 _SketchTexture_ST;
 			half _SketchTexture_OffsetSpeed;
-			float _SketchMin;
-			float _SketchMax;
 			fixed4 _SColor;
 			fixed4 _HColor;
 		CBUFFER_END
@@ -374,6 +391,17 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		Cull [_Cull]
 		ZWrite [_ZWrite]
 
+			Stencil
+			{
+				Ref 0
+				ReadMask 255
+				WriteMask 255
+				Comp Always
+				Pass Keep
+				Fail Keep
+				ZFail Keep
+			}
+
 			HLSLPROGRAM
 			// Required to compile gles 2.0 with standard SRP library
 			// All shaders must be compiled with HLSLcc and currently only gles is not using HLSLcc by default
@@ -425,6 +453,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			#pragma shader_feature_local_fragment TCP2_SKETCH
 			#pragma shader_feature_local_fragment TCP2_TEXTURED_THRESHOLD
 			#pragma shader_feature_local_vertex TCP2_WIND
+			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 
 			// vertex input
 			struct Attributes
@@ -492,7 +521,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				// Texture Coordinates
 				output.pack3.xy.xy = input.texcoord0.xy * _BaseMap_ST.xy + _BaseMap_ST.zw;
 				// Shader Properties Sampling
-				float3 __vertexDisplacement = ( input.normal.xyz * TCP2_TEX2D_SAMPLE_LOD(_DisplacementTex, _DisplacementTex, output.pack3.xy * _DisplacementTex_ST.xy + _DisplacementTex_ST.zw, 0).rgb * _DisplacementStrength );
+				float3 __vertexDisplacementWorld = ( TCP2_TEX2D_SAMPLE_LOD(_WorldDisplacementTex, _WorldDisplacementTex, output.pack3.xy * _WorldDisplacementTex_ST.xy + _WorldDisplacementTex_ST.zw, 0).rgb * _DisplacementStrength );
 				float __windTimeOffset = ( input.vertexColor.g );
 				float __windSpeed = ( _WindSpeed );
 				float __windFrequency = ( 1.0 );
@@ -512,10 +541,10 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 					output.dynamicLightmapUV = input.texcoord2.xy * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
 				#endif
 
-				#if defined(TCP2_VERTEX_DISPLACEMENT)
-				input.vertex.xyz += __vertexDisplacement;
-				#endif
 				float3 worldPos = mul(unity_ObjectToWorld, input.vertex).xyz;
+				#if defined(TCP2_VERTEX_DISPLACEMENT)
+				worldPos.xyz += __vertexDisplacementWorld;
+				#endif
 				#if defined(TCP2_WIND)
 				// Wind Animation
 				float windTimeOffset = __windTimeOffset;
@@ -587,7 +616,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
 				#if defined(LOD_FADE_CROSSFADE)
-					const float dither = Dither4x4(input.positionCS.xy);
+					const float dither = Dither8x8(input.positionCS.xy);
 					const float ditherThreshold = unity_LODFade.x - CopySign(dither, unity_LODFade.x);
 					clip(ditherThreshold);
 				#endif
@@ -627,12 +656,18 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float4 __albedo = ( TCP2_TEX2D_SAMPLE(_BaseMap, _BaseMap, input.pack3.xy).rgba );
 				float4 __mainColor = ( _BaseColor.rgba );
 				float __alpha = ( __albedo.a * __mainColor.a );
+				float __dissolveMap = ( TCP2_TEX2D_SAMPLE(_DissolveMap, _DissolveMap, input.pack3.xy).r );
+				float __dissolveValue = ( _DissolveValue );
+				float __dissolveGradientWidth = ( _DissolveGradientWidth );
+				float __dissolveGradientStrength = ( 2.0 );
+				float __occlusion = ( TCP2_TEX2D_SAMPLE(_Occlusion, _Occlusion, input.pack3.xy).a + _Occlusion1 );
 				float __ambientIntensity = ( 1.0 );
 				float3 __emission = ( _Emission.rgb );
 				float __stylizedThreshold = ( TCP2_TEX2D_SAMPLE(_StylizedThreshold, _StylizedThreshold, input.pack3.xy * _StylizedThreshold_ST.xy + _StylizedThreshold_ST.zw).a );
 				float __stylizedThresholdScale = ( 1.0 );
-				float __rampThreshold = ( _RampThreshold );
-				float __rampSmoothing = ( _RampSmoothing );
+				float __rampTextureOffset = ( _RampTextureOffset );
+				float __rampTextureSize = ( _RampTextureSize );
+				float __2dRampLerp = ( _2DRampLerp );
 				float3 __diffuseTint = ( _DiffuseTint.rgb );
 				float3 __diffuseTintMask = ( TCP2_TEX2D_SAMPLE(_DiffuseTintMask, _DiffuseTintMask, input.pack3.xy).rgb );
 				float __shadowLineThreshold = ( _ShadowLineThreshold );
@@ -657,14 +692,11 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float __shadowSaturation = ( _Shadow_HSV_S );
 				float __shadowValue = ( _Shadow_HSV_V );
 				float __shadowHsvMask = ( __albedo.a );
+				float3 __sketchColor = ( float3(0,0,0) );
 				float3 __sketchTexture = ( TCP2_TEX2D_SAMPLE(_SketchTexture, _SketchTexture, screenUV * _ScreenParams.zw * _SketchTexture_ST.xy + _SketchTexture_ST.zw + hash22(floor(_Time.xx * _SketchTexture_OffsetSpeed.xx) / _SketchTexture_OffsetSpeed.xx)).aaa );
-				float __sketchAntialiasing = ( 20.0 );
 				float __sketchThresholdScale = ( 1.0 );
-				float __sketchMin = ( _SketchMin );
-				float __sketchMax = ( _SketchMax );
 				float3 __shadowColor = ( _SColor.rgb );
 				float3 __highlightColor = ( _HColor.rgb );
-				float3 __sketchColor = ( float3(0,0,0) );
 
 				// Texture Blending: initialize
 				fixed4 blendingSource = __blendingSource;
@@ -707,6 +739,19 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				#endif
 
 				half3 emission = half3(0,0,0);
+				
+				//Dissolve
+				#if defined(TCP2_DISSOLVE)
+				half dissolveMap = __dissolveMap;
+				half dissolveValue = __dissolveValue;
+				half gradientWidth = __dissolveGradientWidth;
+				float dissValue = dissolveValue*(1+2*gradientWidth) - gradientWidth;
+				float dissolveUV = smoothstep(dissolveMap - gradientWidth, dissolveMap + gradientWidth, dissValue);
+				clip((1-dissolveUV) - 0.001);
+				half4 dissolveColor = ( TCP2_TEX2D_SAMPLE(_DissolveGradientTexture, _DissolveGradientTexture, dissolveUV.xx).rgba );
+				dissolveColor *= __dissolveGradientStrength * dissolveUV;
+				emission += dissolveColor.rgb;
+				#endif
 				half4 albedoAlpha = half4(albedo, alpha);
 				
 				// Texture Blending: sample
@@ -770,7 +815,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				// are also defined in case you want to sample some terms per-vertex.
 				half3 bakedGI = SampleSH(normalWS);
 			#endif
-				half occlusion = 1;
+				half occlusion = __occlusion;
 
 			#if defined(_SCREEN_SPACE_OCCLUSION)
 				occlusion = min(occlusion, aoFactor.indirectAmbientOcclusion);
@@ -804,10 +849,14 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				#endif
 				half3 ramp;
 				
-				half rampThreshold = __rampThreshold;
-				half rampSmooth = __rampSmoothing * 0.5;
-				ndl = saturate(ndl);
-				ramp = smoothstep(rampThreshold - rampSmooth, rampThreshold + rampSmooth, ndl);
+				half rampOffset = __rampTextureOffset;
+				half rampSize = __rampTextureSize * 0.5;
+				half2 rampUv = ndl.xx * 0.5 + 0.5;
+				half remap_min = rampOffset - rampSize;
+				half diff = (rampOffset + rampSize) - remap_min;
+				rampUv = saturate(rampUv * (1.0 / diff) - (remap_min / diff));
+				rampUv.y = __2dRampLerp;
+				ramp = tex2D(_Ramp, rampUv).rgb;
 
 				// apply attenuation
 				ramp *= atten;
@@ -908,8 +957,13 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 							#endif
 							half3 ramp;
 							
-							ndl = saturate(ndl);
-							ramp = smoothstep(rampThreshold - rampSmooth, rampThreshold + rampSmooth, ndl);
+							sampler2D rampTexture = _Ramp;
+							half2 rampUv = ndl;
+							half remap_min = rampOffset - rampSize;
+							half diff = (rampOffset + rampSize) - remap_min;
+							rampUv = saturate(rampUv * (1.0 / diff) - (remap_min / diff));
+							rampUv.y = __2dRampLerp;
+							ramp = tex2D(rampTexture, rampUv).rgb;
 
 							// apply attenuation (shadowmaps & point/spot lights attenuation)
 							ramp *= atten;
@@ -1004,8 +1058,13 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 					#endif
 					half3 ramp;
 					
-					ndl = saturate(ndl);
-					ramp = smoothstep(rampThreshold - rampSmooth, rampThreshold + rampSmooth, ndl);
+					sampler2D rampTexture = _Ramp;
+					half2 rampUv = ndl;
+					half remap_min = rampOffset - rampSize;
+					half diff = (rampOffset + rampSize) - remap_min;
+					rampUv = saturate(rampUv * (1.0 / diff) - (remap_min / diff));
+					rampUv.y = __2dRampLerp;
+					ramp = tex2D(rampTexture, rampUv).rgb;
 
 					// apply attenuation (shadowmaps & point/spot lights attenuation)
 					ramp *= atten;
@@ -1072,15 +1131,14 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				
 				// Sketch
 				#if defined(TCP2_SKETCH)
-				half3 sketch = __sketchTexture;
-				half sketchThresholdWidth = __sketchAntialiasing * fwidth(ndl);
-				sketch = smoothstep(sketch - sketchThresholdWidth, sketch, clamp(saturate(accumulatedRamp * __sketchThresholdScale), __sketchMin, __sketchMax));
+				half3 sketchColor = lerp(__sketchColor, half3(1,1,1), __sketchTexture);
+				half3 sketch = lerp(sketchColor, half3(1,1,1), saturate(accumulatedRamp * __sketchThresholdScale));
 				#endif
 				half3 shadowColor = (1 - accumulatedRamp.rgb) * __shadowColor;
 				accumulatedRamp = accumulatedColors.rgb * __highlightColor + shadowColor;
 				color += albedo * accumulatedRamp;
 				#if defined(TCP2_SKETCH)
-				color.rgb *= lerp(__sketchColor, half3(1,1,1), sketch.rgb);
+				color.rgb *= sketch.rgb;
 				#endif
 
 				// apply ambient
@@ -1178,7 +1236,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				// Texture Coordinates
 				output.pack2.xy.xy = input.texcoord0.xy * _BaseMap_ST.xy + _BaseMap_ST.zw;
 				// Shader Properties Sampling
-				float3 __vertexDisplacement = ( input.normal.xyz * TCP2_TEX2D_SAMPLE_LOD(_DisplacementTex, _DisplacementTex, output.pack2.xy * _DisplacementTex_ST.xy + _DisplacementTex_ST.zw, 0).rgb * _DisplacementStrength );
+				float3 __vertexDisplacementWorld = ( TCP2_TEX2D_SAMPLE_LOD(_WorldDisplacementTex, _WorldDisplacementTex, output.pack2.xy * _WorldDisplacementTex_ST.xy + _WorldDisplacementTex_ST.zw, 0).rgb * _DisplacementStrength );
 				float __windTimeOffset = ( input.vertexColor.g );
 				float __windSpeed = ( _WindSpeed );
 				float __windFrequency = ( 1.0 );
@@ -1188,10 +1246,10 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float3 __windMask = ( input.vertexColor.rrr );
 				float __windStrength = ( _WindStrength );
 
-				#if defined(TCP2_VERTEX_DISPLACEMENT)
-				input.vertex.xyz += __vertexDisplacement;
-				#endif
 				float3 worldPos = mul(unity_ObjectToWorld, input.vertex).xyz;
+				#if defined(TCP2_VERTEX_DISPLACEMENT)
+				worldPos.xyz += __vertexDisplacementWorld;
+				#endif
 				#if defined(TCP2_WIND)
 				// Wind Animation
 				float windTimeOffset = __windTimeOffset;
@@ -1250,6 +1308,10 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float4 __albedo = ( TCP2_TEX2D_SAMPLE(_BaseMap, _BaseMap, input.pack2.xy).rgba );
 				float4 __mainColor = ( _BaseColor.rgba );
 				float __alpha = ( __albedo.a * __mainColor.a );
+				float __dissolveMap = ( TCP2_TEX2D_SAMPLE(_DissolveMap, _DissolveMap, input.pack2.xy).r );
+				float __dissolveValue = ( _DissolveValue );
+				float __dissolveGradientWidth = ( _DissolveGradientWidth );
+				float __dissolveGradientStrength = ( 2.0 );
 
 				half3 viewDirWS = SafeNormalize(GetCameraPositionWS() - positionWS);
 				half ndv = abs(dot(viewDirWS, normalWS));
@@ -1258,6 +1320,19 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				half3 albedo = half3(1,1,1);
 				half alpha = __alpha;
 				half3 emission = half3(0,0,0);
+				
+				//Dissolve
+				#if defined(TCP2_DISSOLVE)
+				half dissolveMap = __dissolveMap;
+				half dissolveValue = __dissolveValue;
+				half gradientWidth = __dissolveGradientWidth;
+				float dissValue = dissolveValue*(1+2*gradientWidth) - gradientWidth;
+				float dissolveUV = smoothstep(dissolveMap - gradientWidth, dissolveMap + gradientWidth, dissValue);
+				clip((1-dissolveUV) - 0.001);
+				half4 dissolveColor = ( TCP2_TEX2D_SAMPLE(_DissolveGradientTexture, _DissolveGradientTexture, dissolveUV.xx).rgba );
+				dissolveColor *= __dissolveGradientStrength * dissolveUV;
+				emission += dissolveColor.rgb;
+				#endif
 
 				#if defined(DEPTH_NORMALS_PASS)
 					#if defined(_WRITE_RENDERING_LAYERS)
@@ -1309,6 +1384,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			//--------------------------------------
 			// Toony Colors Pro 2 keywords
 			#pragma shader_feature_local_vertex TCP2_WIND
+			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 			#pragma shader_feature_local_vertex TCP2_VERTEX_DISPLACEMENT
 
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -1349,6 +1425,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			//--------------------------------------
 			// Toony Colors Pro 2 keywords
 			#pragma shader_feature_local_vertex TCP2_WIND
+			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 			#pragma shader_feature_local_vertex TCP2_VERTEX_DISPLACEMENT
 
 			ENDHLSL
@@ -1391,5 +1468,5 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 	CustomEditor "ToonyColorsPro.ShaderGenerator.MaterialInspector_SG2"
 }
 
-/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_ANISOTROPIC","SPECULAR_TOON","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISPLACEMENT","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","WORLD_NORMAL_FROM_BUMP","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_GRADIENT","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM_SIN","WIND_ANIM","WIND_SHADER_FEATURE","WIND_SIN_2","AUTO_TRANSPARENT_BLENDING","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_META_PASS","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","TEMPLATE_LWRP"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="Opaque",RampTextureDrawer="[TCP2Gradient]",RampTextureLabel="Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
-/* TCP_HASH 315cf8988886d7852efe1c6fe7701bab */
+/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_ANISOTROPIC","SPECULAR_TOON","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM_SIN","WIND_ANIM","WIND_SHADER_FEATURE","WIND_SIN_2","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_META_PASS","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","OCCLUSION","VERTEX_DISPLACEMENT_WORLD","DISSOLVE","DISSOLVE_CLIP","DISSOLVE_GRADIENT","DISSOLVE_SHADER_FEATURE","AUTO_TRANSPARENT_BLENDING","STENCIL","DITHER_LOD_8x8","WORLD_NORMAL_FROM_BUMP","TEXTURE_RAMP","TEXTURE_RAMP_2D","TEXTURE_RAMP_SLIDERS","SKETCH_PROGRESSIVE_SMOOTH","TEMPLATE_LWRP","SKETCH"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="Opaque",RampTextureDrawer="[NoScaleOffset]",RampTextureLabel="2D Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Occlusion";imps:list[imp_mp_texture(uto:False;tov:"";tov_lbl:"";gto:False;sbt:False;scr:False;scv:"";scv_lbl:"";gsc:False;roff:False;goff:False;sin_anm:False;sin_anmv:"";sin_anmv_lbl:"";gsin:False;notile:False;triplanar_local:False;def:"white";locked_uv:False;uv:0;cc:1;chan:"A";mip:-1;mipprop:False;ssuv_vert:False;ssuv_obj:False;uv_type:Texcoord;uv_chan:"XZ";tpln_scale:1;uv_shaderproperty:__NULL__;uv_cmp:__NULL__;sep_sampler:__NULL__;prop:"_Occlusion";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"61512a5d-a31f-43e4-9071-790e385835d8";op:Multiply;lbl:"Occlusion";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1),imp_mp_float(def:1;prop:"_Occlusion1";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"b4980ee5-6a81-447b-91c1-7acb0adfe451";op:Add;lbl:"Occlusion Float";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Ramp Threshold";imps:list[imp_mp_range(def:0.5;min:0.01;max:2;prop:"_RampThreshold";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"891ccb66-40a1-486c-8401-84c9cd84280e";op:Multiply;lbl:"Threshold";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Smoothing";imps:list[imp_mp_range(def:0.5;min:0.001;max:5;prop:"_RampSmoothing";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"352c395c-2071-4511-849b-1ed80ce39a1f";op:Multiply;lbl:"Smoothing";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
+/* TCP_HASH 5eab49b05645a16668c7b9591e8e4bb6 */
