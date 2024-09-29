@@ -87,6 +87,7 @@ public class StorylineScript : MonoBehaviour
                         currentDialogue = string.Empty;
                         storyText.text = string.Empty;
                         currentStory++;
+                        StopAllCoroutines();
                     }
                     else if (currentStory > 9 && lockedDialogue) {
                         allTutorialsFinished = false;
@@ -105,7 +106,6 @@ public class StorylineScript : MonoBehaviour
                     }
                 }
                 else {
-                    Debug.Log("I am Called.");
                     NextLine();
                 }
             }
