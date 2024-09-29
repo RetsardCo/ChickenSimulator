@@ -55,6 +55,20 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		//Rim Direction
 		_RimDirVert ("Rim Direction", Vector) = (0,0,1,1)
 		[TCP2Separator]
+
+		[TCP2HeaderHelp(Reflections)]
+		[Toggle(TCP2_REFLECTIONS)] _UseReflections ("Enable Reflections", Float) = 0
+		[TCP2ColorNoAlpha] _ReflectionColor ("Color", Color) = (1,1,1,1)
+		_ReflectionSmoothness ("Smoothness", Range(0,1)) = 0.5
+		
+		[NoScaleOffset] _Cube ("Reflection Cubemap", Cube) = "black" {}
+		[TCP2ColorNoAlpha] _ReflectionCubemapColor ("Color", Color) = (1,1,1,1)
+		_ReflectionCubemapRoughness ("Cubemap Roughness", Range(0,1)) = 0.5
+		_PlanarNormalsInfluence ("Reflection Normal Influence", Range(0,1)) = 0.1
+		[HideInInspector] _ReflectionTex ("Planar Reflection RenderTexture", 2D) = "white" {}
+		_FresnelMin ("Fresnel Min", Range(0,2)) = 0
+		_FresnelMax ("Fresnel Max", Range(0,2)) = 1.5
+		[TCP2Separator]
 		
 		[TCP2HeaderHelp(Subsurface Scattering)]
 		[Toggle(TCP2_SUBSURFACE)] _UseSubsurface ("Enable Subsurface Scattering", Float) = 0
@@ -131,7 +145,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		Tags
 		{
 			"RenderPipeline" = "UniversalPipeline"
-			"RenderType"="Opaque"
+			"RenderType"="TransparentCutout"
 			"Queue"="AlphaTest"
 		}
 
@@ -179,6 +193,8 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		TCP2_TEX2D_WITH_SAMPLER(_DiffuseTintMask);
 		TCP2_TEX2D_WITH_SAMPLER(_SketchTexture);
 		sampler2D _Ramp;
+		samplerCUBE _Cube;
+		sampler2D _ReflectionTex;
 
 		CBUFFER_START(UnityPerMaterial)
 			
@@ -228,6 +244,13 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			half _SketchTexture_OffsetSpeed;
 			fixed4 _SColor;
 			fixed4 _HColor;
+			float _ReflectionSmoothness;
+			float _ReflectionCubemapRoughness;
+			fixed4 _ReflectionCubemapColor;
+			float _PlanarNormalsInfluence;
+			float _FresnelMin;
+			float _FresnelMax;
+			fixed4 _ReflectionColor;
 		CBUFFER_END
 
 		#if defined(UNITY_DOTS_INSTANCING_ENABLED)
@@ -390,6 +413,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		Blend [_SrcBlend] [_DstBlend]
 		Cull [_Cull]
 		ZWrite [_ZWrite]
+			AlphaToMask On
 
 			Stencil
 			{
@@ -447,6 +471,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			#pragma shader_feature_local_fragment TCP2_SPECULAR
 			#pragma shader_feature_local_vertex TCP2_VERTEX_DISPLACEMENT
 			#pragma shader_feature_local TCP2_RIM_LIGHTING
+			#pragma shader_feature_local_fragment TCP2_REFLECTIONS
 		#pragma shader_feature_local _ _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature_local_fragment TCP2_SUBSURFACE
 			#pragma shader_feature_local _NORMALMAP
@@ -607,6 +632,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			}
 
 			half4 Fragment(Varyings input
+				, half vFace : VFACE
 			#ifdef _WRITE_RENDERING_LAYERS
 				, out float4 outRenderingLayers : SV_Target1
 			#endif
@@ -623,6 +649,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 
 				float3 positionWS = input.worldPosAndFog.xyz;
 				float3 normalWS = normalize(input.normal);
+				normalWS.xyz *= (vFace < 0) ? -1.0 : 1.0;
 				half3 viewDirWS = SafeNormalize(GetCameraPositionWS() - positionWS);
 				half3 tangentWS = input.pack1.xyz;
 				half3 bitangentWS = input.pack2.xyz;
@@ -697,6 +724,13 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float __sketchThresholdScale = ( 1.0 );
 				float3 __shadowColor = ( _SColor.rgb );
 				float3 __highlightColor = ( _HColor.rgb );
+				float __reflectionSmoothness = ( _ReflectionSmoothness );
+				float __reflectionCubemapRoughness = ( _ReflectionCubemapRoughness );
+				float3 __reflectionCubemapColor = ( _ReflectionCubemapColor.rgb );
+				float __planarNormalsInfluence = ( _PlanarNormalsInfluence );
+				float __fresnelMin = ( _FresnelMin );
+				float __fresnelMax = ( _FresnelMax );
+				float3 __reflectionColor = ( _ReflectionColor.rgb );
 
 				// Texture Blending: initialize
 				fixed4 blendingSource = __blendingSource;
@@ -752,6 +786,8 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				dissolveColor *= __dissolveGradientStrength * dissolveUV;
 				emission += dissolveColor.rgb;
 				#endif
+				// Alpha Testing
+				half cutoffValue = Dither4x4(input.positionCS.xy);
 				half4 albedoAlpha = half4(albedo, alpha);
 				
 				// Texture Blending: sample
@@ -1149,6 +1185,42 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 					color.rgb *= alpha;
 				#endif
 
+				#if defined(TCP2_REFLECTIONS)
+				half3 reflections = half3(0, 0, 0);
+
+				// World reflection
+				half reflectionRoughness = 1 - __reflectionSmoothness;
+				half3 reflectVector = reflect(-viewDirWS, normalWS);
+				
+				#if USE_FORWARD_PLUS
+					half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, positionWS, reflectionRoughness, occlusion, normalizedScreenSpaceUV);
+				#else
+					half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, reflectionRoughness, occlusion);
+				#endif
+				half reflectionRoughness4 = max(pow(reflectionRoughness, 4), 6.103515625e-5);
+				float surfaceReductionRefl = 1.0 / (reflectionRoughness4 + 1.0);
+				reflections += indirectSpecular * surfaceReductionRefl;
+
+				#if defined(TCP2_REFLECTIONS)
+				// Reflection cubemap
+				reflections.rgb += texCUBElod(_Cube, half4(reflectVector.xyz, __reflectionCubemapRoughness * 10.0)).rgb;
+				reflections.rgb *= __reflectionCubemapColor;
+				#if defined(_NORMALMAP)
+				float2 planarReflectionCoords = (input.screenPosition.xyzw.xy + (normalTS.xy * __planarNormalsInfluence)) / input.screenPosition.xyzw.w;
+				reflections.rgb += tex2D(_ReflectionTex, planarReflectionCoords).rgb;
+				#else
+				reflections.rgb += tex2D(_ReflectionTex, input.screenPosition.xyzw.xy / input.screenPosition.xyzw.w).rgb;
+				#endif
+				#endif
+				half fresnelMin = __fresnelMin;
+				half fresnelMax = __fresnelMax;
+				half fresnelTerm = smoothstep(fresnelMin, fresnelMax, 1 - ndvRaw);
+				reflections *= fresnelTerm;
+
+				reflections *= __reflectionColor;
+				color.rgb += reflections;
+				#endif
+
 				color += emission;
 
 				// Mix the pixel color with fogColor. You can optionally use MixFogColor to override the fogColor with a custom one.
@@ -1333,6 +1405,8 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				dissolveColor *= __dissolveGradientStrength * dissolveUV;
 				emission += dissolveColor.rgb;
 				#endif
+				// Alpha Testing
+				half cutoffValue = Dither4x4(input.positionCS.xy);
 
 				#if defined(DEPTH_NORMALS_PASS)
 					#if defined(_WRITE_RENDERING_LAYERS)
@@ -1347,7 +1421,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 					#endif
 				#endif
 
-				return 0;
+				return alpha;
 			}
 
 		#endif
@@ -1361,6 +1435,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				"LightMode" = "ShadowCaster"
 			}
 
+			AlphaToMask On
 			ZWrite On
 			ZTest LEqual
 
@@ -1401,6 +1476,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				"LightMode" = "DepthOnly"
 			}
 
+			AlphaToMask On
 			ZWrite On
 			ColorMask 0
 			Cull [_Cull]
@@ -1459,14 +1535,11 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			ENDHLSL
 		}
 
-		// Used for Baking GI. This pass is stripped from build.
-		UsePass "Universal Render Pipeline/Lit/Meta"
-
 	}
 
 	FallBack "Hidden/InternalErrorShader"
 	CustomEditor "ToonyColorsPro.ShaderGenerator.MaterialInspector_SG2"
 }
 
-/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_ANISOTROPIC","SPECULAR_TOON","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM_SIN","WIND_ANIM","WIND_SHADER_FEATURE","WIND_SIN_2","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_META_PASS","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","OCCLUSION","VERTEX_DISPLACEMENT_WORLD","DISSOLVE","DISSOLVE_CLIP","DISSOLVE_GRADIENT","DISSOLVE_SHADER_FEATURE","AUTO_TRANSPARENT_BLENDING","STENCIL","DITHER_LOD_8x8","WORLD_NORMAL_FROM_BUMP","TEXTURE_RAMP","TEXTURE_RAMP_2D","TEXTURE_RAMP_SLIDERS","SKETCH_PROGRESSIVE_SMOOTH","TEMPLATE_LWRP","SKETCH"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="Opaque",RampTextureDrawer="[NoScaleOffset]",RampTextureLabel="2D Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Occlusion";imps:list[imp_mp_texture(uto:False;tov:"";tov_lbl:"";gto:False;sbt:False;scr:False;scv:"";scv_lbl:"";gsc:False;roff:False;goff:False;sin_anm:False;sin_anmv:"";sin_anmv_lbl:"";gsin:False;notile:False;triplanar_local:False;def:"white";locked_uv:False;uv:0;cc:1;chan:"A";mip:-1;mipprop:False;ssuv_vert:False;ssuv_obj:False;uv_type:Texcoord;uv_chan:"XZ";tpln_scale:1;uv_shaderproperty:__NULL__;uv_cmp:__NULL__;sep_sampler:__NULL__;prop:"_Occlusion";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"61512a5d-a31f-43e4-9071-790e385835d8";op:Multiply;lbl:"Occlusion";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1),imp_mp_float(def:1;prop:"_Occlusion1";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"b4980ee5-6a81-447b-91c1-7acb0adfe451";op:Add;lbl:"Occlusion Float";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Ramp Threshold";imps:list[imp_mp_range(def:0.5;min:0.01;max:2;prop:"_RampThreshold";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"891ccb66-40a1-486c-8401-84c9cd84280e";op:Multiply;lbl:"Threshold";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Smoothing";imps:list[imp_mp_range(def:0.5;min:0.001;max:5;prop:"_RampSmoothing";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"352c395c-2071-4511-849b-1ed80ce39a1f";op:Multiply;lbl:"Smoothing";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
-/* TCP_HASH 5eab49b05645a16668c7b9591e8e4bb6 */
+/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_ANISOTROPIC","SPECULAR_TOON","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM_SIN","WIND_ANIM","WIND_SHADER_FEATURE","WIND_SIN_2","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","OCCLUSION","VERTEX_DISPLACEMENT_WORLD","DISSOLVE","DISSOLVE_CLIP","DISSOLVE_GRADIENT","DISSOLVE_SHADER_FEATURE","DITHER_LOD_8x8","TEXTURE_RAMP","TEXTURE_RAMP_2D","SKETCH_PROGRESSIVE_SMOOTH","SKETCH","TEXTURE_RAMP_SLIDERS","WORLD_NORMAL_FROM_BUMP","ALPHA_TESTING","ALPHA_TO_COVERAGE","ALPHA_TO_COVERAGE_RAW","AUTO_TRANSPARENT_BLENDING","ALPHA_TESTING_DITHERING","STENCIL","BACKFACE_LIGHTING_XYZ","GLOSSY_REFLECTIONS","REFLECTION_SHADER_FEATURE","REFLECTION_FRESNEL","REFLECTION_CUBEMAP","PLANAR_REFLECTION","REFL_ROUGH","TEMPLATE_LWRP"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="TransparentCutout",RampTextureDrawer="[NoScaleOffset]",RampTextureLabel="2D Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Occlusion";imps:list[imp_mp_texture(uto:False;tov:"";tov_lbl:"";gto:False;sbt:False;scr:False;scv:"";scv_lbl:"";gsc:False;roff:False;goff:False;sin_anm:False;sin_anmv:"";sin_anmv_lbl:"";gsin:False;notile:False;triplanar_local:False;def:"white";locked_uv:False;uv:0;cc:1;chan:"A";mip:-1;mipprop:False;ssuv_vert:False;ssuv_obj:False;uv_type:Texcoord;uv_chan:"XZ";tpln_scale:1;uv_shaderproperty:__NULL__;uv_cmp:__NULL__;sep_sampler:__NULL__;prop:"_Occlusion";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"61512a5d-a31f-43e4-9071-790e385835d8";op:Multiply;lbl:"Occlusion";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1),imp_mp_float(def:1;prop:"_Occlusion1";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"b4980ee5-6a81-447b-91c1-7acb0adfe451";op:Add;lbl:"Occlusion Float";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Blend Operation";imps:list[imp_enum(value_type:1;value:1;enum_type:"ToonyColorsPro.ShaderGenerator.BlendOperation";guid:"9b52cec5-21b0-4e06-a3d9-40ad972c0b1a";op:Multiply;lbl:"Blend Operation";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Threshold";imps:list[imp_mp_range(def:0.5;min:0.01;max:2;prop:"_RampThreshold";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"891ccb66-40a1-486c-8401-84c9cd84280e";op:Multiply;lbl:"Threshold";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Smoothing";imps:list[imp_mp_range(def:0.5;min:0.001;max:5;prop:"_RampSmoothing";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"352c395c-2071-4511-849b-1ed80ce39a1f";op:Multiply;lbl:"Smoothing";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Depth Test";imps:list[imp_enum(value_type:1;value:2;enum_type:"ToonyColorsPro.ShaderGenerator.CompareFunction";guid:"f15c875c-083b-48fb-8862-a1132f56eabe";op:Multiply;lbl:"Depth Test";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
+/* TCP_HASH 8441f56d77d714808f64cd024b0f0561 */
