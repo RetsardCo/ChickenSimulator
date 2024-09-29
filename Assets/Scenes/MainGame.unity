@@ -10366,6 +10366,7 @@ MonoBehaviour:
   storyOngoing: 0
   allTutorialsFinished: 0
   lockedDialogue: 0
+  dialogueEnding: 0
   dayOneTutorialDialogues:
   - Hey there my favorite grandchild, welcome back to the farm!
   - I sure do hope you still remember me.
@@ -10389,6 +10390,7 @@ MonoBehaviour:
   - That's it! You got it! You cleaned your first chicken poop!
   - You actually learn quick!
   needToCleanPoop: 0
+  poopStory: 0
   feederTutorialDialogue:
   - Here, we have the chicken feeder.
   - As the name suggests, this is where the chicken feeds.
@@ -10410,6 +10412,7 @@ MonoBehaviour:
   - The chicken will go hungry if they didn't eat well.
   - But that's fine. I'll level this out.
   - Just remember to do it just right next time, okay?
+  feederStory: 0
   drinkerTutorialDialogue:
   - Here's the chicken drinker. This is where the chickens drink.
   - It's empty.
@@ -10432,12 +10435,15 @@ MonoBehaviour:
   - But it's alright. It's fine.
   - Just remember that we fill it with just the right amount, okay?
   - Let me fix that for you.
+  drinkerStory: 0
   whereAreYouGoingDialogue:
   - Where are you going, my child?
   - Don't go off alone. It's dangerous outside!
   - We'll go somewhere when we got the time, okay?
   - Let's just go back for now.
+  whereStory: 0
   whatLinesToDeliver: 
+  detector: {fileID: 1114075466}
 --- !u!1 &1440828830
 GameObject:
   m_ObjectHideFlags: 0

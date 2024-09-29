@@ -64,6 +64,7 @@ public class PlayerDetectorScript : MonoBehaviour
         }
 
         if (other.CompareTag("ExitArea")) {
+            gameObject.GetComponent<SphereCollider>().enabled = false;
             storylineScript.whatLinesToDeliver = "escape";
             StartCoroutine(storylineScript.TypeLine());
         }
