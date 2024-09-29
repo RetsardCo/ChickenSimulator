@@ -5,11 +5,13 @@ using UnityEngine;
 public class PoopScript : MonoBehaviour
 {
     Rigidbody rb;
-    GameManager gameManager = GameObject.Find("Game Manager").GetComponent<GameManager>();
-    StorylineScript storylineScript = GameObject.Find("Dialogue System").GetComponent<StorylineScript>();
+    GameManager gameManager;
+    StorylineScript storylineScript;
     
     private void Start() {
         rb = GetComponent<Rigidbody>();
+        gameManager = GameObject.Find("Game Manager").GetComponent<GameManager>();
+        storylineScript = GameObject.Find("Dialogue System").GetComponent<StorylineScript>();
     }
 
     private void Update() {

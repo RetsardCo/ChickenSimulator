@@ -50,6 +50,8 @@ public class StorylineScript : MonoBehaviour
 
     [HideInInspector] public string whatLinesToDeliver;
 
+    [SerializeField] SphereCollider detector;
+
     //string currentName;
 
     private void Awake() {
@@ -98,10 +100,12 @@ public class StorylineScript : MonoBehaviour
                         HideDialogue();
                     }
                     else {
+                        //Debug.Log("I am Called.");
                         NextLine();
                     }
                 }
                 else {
+                    Debug.Log("I am Called.");
                     NextLine();
                 }
             }
@@ -232,10 +236,10 @@ public class StorylineScript : MonoBehaviour
                 whereStory++;
             }
             else {
-                whereStory = 0;
                 currentDialogue = string.Empty;
                 HideDialogue();
-                StartCoroutine(gameManager.ResetPlayerLocation(2.5f, false));
+                //StartCoroutine(gameManager.ResetPlayerLocation(2.5f, false));
+               //detector.enabled = true;
             }
         }
         else if (whatLinesToDeliver == "poopCleanUp") {
