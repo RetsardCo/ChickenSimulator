@@ -37,11 +37,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		[TCP2HeaderHelp(Specular)]
 		[Toggle(TCP2_SPECULAR)] _UseSpecular ("Enable Specular", Float) = 0
 		[TCP2ColorNoAlpha] _SpecularColor ("Specular Color", Color) = (0.5,0.5,0.5,1)
-		_SpecularShadowAttenuation ("Specular Shadow Attenuation", Float) = 0.25
-		_SpecularSmoothness ("Smoothness", Float) = 0.2
-		_AnisotropicSpread ("Anisotropic Spread", Range(0,2)) = 1
-		_SpecularToonSize ("Toon Size", Range(0,1)) = 0.25
-		_SpecularToonSmoothness ("Toon Smoothness", Range(0.001,0.5)) = 0.05
+		_SpecularRoughnessPBR ("Roughness", Range(0,1)) = 0.5
 		[TCP2Separator]
 
 		[TCP2HeaderHelp(Emission)]
@@ -53,8 +49,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		[TCP2ColorNoAlpha] _RimColor ("Rim Color", Color) = (0.8,0.8,0.8,0.5)
 		_RimMinVert ("Rim Min", Range(0,2)) = 0.5
 		_RimMaxVert ("Rim Max", Range(0,2)) = 1
-		//Rim Direction
-		_RimDirVert ("Rim Direction", Vector) = (0,0,1,1)
 		[TCP2Separator]
 
 		[TCP2HeaderHelp(Reflections)]
@@ -120,7 +114,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		[TCP2Separator]
 		
 		[TCP2HeaderHelp(Wind)]
-		[Toggle(TCP2_WIND)] _UseWind ("Enable Wind", Float) = 0
 		_WindDirection ("Direction", Vector) = (1,0,0,0)
 		_WindStrength ("Strength", Range(0,0.2)) = 0.025
 		_WindSpeed ("Speed", Range(0,10)) = 2.5
@@ -134,6 +127,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 		[TCP2Separator]
 		
 		_SubsurfaceScreenSpaceInfluence ("Screen-space Influence", Range(0,10)) = 0.5
+		[Enum(ToonyColorsPro.ShaderGenerator.Culling)] _faceCulling ("Face Culling", Float) = 0
 
 		[ToggleOff(_RECEIVE_SHADOWS_OFF)] _ReceiveShadowsOff ("Receive Shadows", Float) = 1
 
@@ -205,7 +199,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			float _WindSpeed;
 			float4 _WindDirection;
 			float _WindStrength;
-			float4 _RimDirVert;
 			float _RimMinVert;
 			float _RimMaxVert;
 			float _Parallax;
@@ -227,11 +220,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			float _ShadowLineSmoothing;
 			fixed4 _ShadowLineColor;
 			fixed4 _RimColor;
-			float _AnisotropicSpread;
-			float _SpecularSmoothness;
-			float _SpecularToonSize;
-			float _SpecularToonSmoothness;
-			float _SpecularShadowAttenuation;
+			float _SpecularRoughnessPBR;
 			fixed4 _SpecularColor;
 			float _SubsurfaceDistortion;
 			float _SubsurfacePower;
@@ -348,6 +337,21 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			half dp3 = max(0.001f, dot(inVec, inVec));
 			return inVec * rsqrt(dp3);
 		}
+		
+			//GGX
+			#define TCP2_PI			3.14159265359
+			#define TCP2_INV_PI		0.31830988618f
+			#if defined(SHADER_API_MOBILE)
+				#define TCP2_EPSILON 1e-4f
+			#else
+				#define TCP2_EPSILON 1e-7f
+			#endif
+			inline half GGX(half NdotH, half roughness)
+			{
+				half a2 = roughness * roughness;
+				half d = (NdotH * a2 - NdotH) * NdotH + 1.0f;
+				return TCP2_INV_PI * a2 / (d * d + TCP2_EPSILON);
+			}
 		
 		//Subsurface Scattering directional light screen-space influence
 		half subsurfaceScreenInfluence(half3 lightDir, half3 viewDir, half size)
@@ -479,7 +483,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			#pragma shader_feature_local _NORMALMAP
 			#pragma shader_feature_local_fragment TCP2_SKETCH
 			#pragma shader_feature_local_fragment TCP2_TEXTURED_THRESHOLD
-			#pragma shader_feature_local_vertex TCP2_WIND
 			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 
 			// vertex input
@@ -554,10 +557,17 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float __windFrequency = ( 1.0 );
 				float4 __windSineScale2 = ( float4(2.3,1.7,1.4,1.2) );
 				float __windSineStrength2 = ( .6 );
+				float4 __windSineScale3 = ( float4(1.3,2.9,2.1,0.8) );
+				float __windSineStrength3 = ( .5 );
+				float4 __windSineScale4 = ( float4(3.4,2.6,3.1,1.5) );
+				float __windSineStrength4 = ( .2 );
+				float4 __windSineScale5 = ( float4(1.4,2.3,2.7,1.1) );
+				float __windSineStrength5 = ( .4 );
+				float4 __windSineScale6 = ( float4(2.9,1.6,3.3,0.9) );
+				float __windSineStrength6 = ( .3 );
 				float3 __windDirection = ( _WindDirection.xyz );
 				float3 __windMask = ( input.vertexColor.rrr );
 				float __windStrength = ( _WindStrength );
-				float3 __rimDirVert = ( _RimDirVert.xyz );
 				float __rimMinVert = ( _RimMinVert );
 				float __rimMaxVert = ( _RimMaxVert );
 
@@ -572,7 +582,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				#if defined(TCP2_VERTEX_DISPLACEMENT)
 				worldPos.xyz += __vertexDisplacementWorld;
 				#endif
-				#if defined(TCP2_WIND)
 				// Wind Animation
 				float windTimeOffset = __windTimeOffset;
 				float windSpeed = __windSpeed;
@@ -582,11 +591,22 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float4 windSin2scale = __windSineScale2;
 				float windSin2strength = __windSineStrength2;
 				windFactor += sin(windPhase.xxx * windSin2scale.www + windFrequency * windSin2scale.xyz) * windSin2strength;
+				float4 windSin3scale = __windSineScale3;
+				float windSin3strength = __windSineStrength3;
+				windFactor += sin(windPhase.xxx * windSin3scale.www + windFrequency * windSin3scale.xyz) * windSin3strength;
+				float4 windSin4scale = __windSineScale4;
+				float windSin4strength = __windSineStrength4;
+				windFactor += sin(windPhase.xxx * windSin4scale.www + windFrequency * windSin4scale.xyz) * windSin4strength;
+				float4 windSin5scale = __windSineScale5;
+				float windSin5strength = __windSineStrength5;
+				windFactor += sin(windPhase.xxx * windSin5scale.www + windFrequency * windSin5scale.xyz) * windSin5strength;
+				float4 windSin6scale = __windSineScale6;
+				float windSin6strength = __windSineStrength6;
+				windFactor += sin(windPhase.xxx * windSin6scale.www + windFrequency * windSin6scale.xyz) * windSin6strength;
 				float3 windDir = normalize(__windDirection);
 				float3 windMask = __windMask;
 				float windStrength = __windStrength;
 				worldPos.xyz += windDir * windFactor * windMask * windStrength;
-				#endif
 				input.vertex.xyz = mul(unity_WorldToObject, float4(worldPos, 1)).xyz;
 				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.vertex.xyz);
 			#if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
@@ -620,12 +640,11 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				output.positionCS = vertexInput.positionCS;
 
 				half3 viewDirWS = SafeNormalize(GetCameraPositionWS() - vertexInput.positionWS);
+				half ndv = abs(dot(viewDirWS, vertexNormalInput.normalWS));
+				half ndvRaw = ndv;
 
 				#if defined(TCP2_RIM_LIGHTING)
-				half3 rViewDir = viewDirWS;
-				half3 rimDir = __rimDirVert;
-				rViewDir = normalize(UNITY_MATRIX_V[0].xyz * rimDir.x + UNITY_MATRIX_V[1].xyz * rimDir.y + UNITY_MATRIX_V[2].xyz * rimDir.z);
-				half rim = 1.0f - saturate(dot(rViewDir, input.normal.xyz));
+				half rim = 1 - ndvRaw;
 				rim = smoothstep(__rimMinVert, __rimMaxVert, rim);
 				output.pack2.w = rim;
 				#endif
@@ -705,11 +724,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float4 __shadowLineColor = ( _ShadowLineColor.rgba );
 				float3 __rimColor = ( _RimColor.rgb );
 				float __rimStrength = ( 1.0 );
-				float __anisotropicSpread = ( _AnisotropicSpread );
-				float __specularSmoothness = ( _SpecularSmoothness );
-				float __specularToonSize = ( _SpecularToonSize );
-				float __specularToonSmoothness = ( _SpecularToonSmoothness );
-				float __specularShadowAttenuation = ( _SpecularShadowAttenuation );
+				float __specularRoughnessPbr = ( _SpecularRoughnessPBR );
 				float3 __specularColor = ( _SpecularColor.rgb );
 				float __subsurfaceDistortion = ( _SubsurfaceDistortion );
 				float __subsurfacePower = ( _SubsurfacePower );
@@ -929,16 +944,20 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				half3 halfDir = SpecSafeNormalize(float3(lightDir) + float3(viewDirWS));
 				
 				#if defined(TCP2_SPECULAR)
-				//Anisotropic Specular
-				float ndh = max(0, dot (normalWS, halfDir));
-				half3 binorm = bitangentWS.xyz;
-				float aX = dot(halfDir, tangentWS) / __anisotropicSpread;
-				float aY = dot(halfDir, binorm) / __specularSmoothness;
-				float specAniso = sqrt(max(0.0, ndl / ndvRaw)) * exp(-2.0 * (aX * aX + aY * aY) / (1.0 + ndh));
-				float spec = smoothstep(__specularToonSize + __specularToonSmoothness, __specularToonSize - __specularToonSmoothness,1 - (specAniso / (1+__specularToonSmoothness)));
-				spec = saturate(spec);
-				half specShadowAtten = saturate(mainLight.shadowAttenuation * ndl + __specularShadowAttenuation) * mainLight.distanceAttenuation;
-				spec *= specShadowAtten;
+				//Specular: GGX
+				half roughness = __specularRoughnessPbr*__specularRoughnessPbr;
+				half nh = saturate(dot(normalWS, halfDir));
+				half spec = GGX(nh, saturate(roughness));
+				spec *= TCP2_PI * 0.05;
+				#ifdef UNITY_COLORSPACE_GAMMA
+					spec = max(0, sqrt(max(1e-4h, spec)));
+					half surfaceReduction = 1.0 - 0.28 * roughness * __specularRoughnessPbr;
+				#else
+					half surfaceReduction = 1.0 / (roughness*roughness + 1.0);
+				#endif
+				spec = max(0, spec * ndl);
+				spec *= surfaceReduction;
+				spec *= atten;
 				
 				//Apply specular
 				emission.rgb += spec * lightColor.rgb * __specularColor;
@@ -1027,16 +1046,20 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 							half3 halfDir = SpecSafeNormalize(float3(lightDir) + float3(viewDirWS));
 							
 							#if defined(TCP2_SPECULAR)
-							//Anisotropic Specular
-							float ndh = max(0, dot (normalWS, halfDir));
-							half3 binorm = bitangentWS.xyz;
-							float aX = dot(halfDir, tangentWS) / __anisotropicSpread;
-							float aY = dot(halfDir, binorm) / __specularSmoothness;
-							float specAniso = sqrt(max(0.0, ndl / ndvRaw)) * exp(-2.0 * (aX * aX + aY * aY) / (1.0 + ndh));
-							float spec = smoothstep(__specularToonSize + __specularToonSmoothness, __specularToonSize - __specularToonSmoothness,1 - (specAniso / (1+__specularToonSmoothness)));
-							spec = saturate(spec);
-							half specShadowAtten = saturate(light.shadowAttenuation * ndl + __specularShadowAttenuation) * light.distanceAttenuation;
-							spec *= specShadowAtten;
+							//Specular: GGX
+							half roughness = __specularRoughnessPbr*__specularRoughnessPbr;
+							half nh = saturate(dot(normalWS, halfDir));
+							half spec = GGX(nh, saturate(roughness));
+							spec *= TCP2_PI * 0.05;
+							#ifdef UNITY_COLORSPACE_GAMMA
+								spec = max(0, sqrt(max(1e-4h, spec)));
+								half surfaceReduction = 1.0 - 0.28 * roughness * __specularRoughnessPbr;
+							#else
+								half surfaceReduction = 1.0 / (roughness*roughness + 1.0);
+							#endif
+							spec = max(0, spec * ndl);
+							spec *= surfaceReduction;
+							spec *= atten;
 							
 							//Apply specular
 							emission.rgb += spec * lightColor.rgb * __specularColor;
@@ -1129,16 +1152,20 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 					half3 halfDir = SpecSafeNormalize(float3(lightDir) + float3(viewDirWS));
 					
 					#if defined(TCP2_SPECULAR)
-					//Anisotropic Specular
-					float ndh = max(0, dot (normalWS, halfDir));
-					half3 binorm = bitangentWS.xyz;
-					float aX = dot(halfDir, tangentWS) / __anisotropicSpread;
-					float aY = dot(halfDir, binorm) / __specularSmoothness;
-					float specAniso = sqrt(max(0.0, ndl / ndvRaw)) * exp(-2.0 * (aX * aX + aY * aY) / (1.0 + ndh));
-					float spec = smoothstep(__specularToonSize + __specularToonSmoothness, __specularToonSize - __specularToonSmoothness,1 - (specAniso / (1+__specularToonSmoothness)));
-					spec = saturate(spec);
-					half specShadowAtten = saturate(light.shadowAttenuation * ndl + __specularShadowAttenuation) * light.distanceAttenuation;
-					spec *= specShadowAtten;
+					//Specular: GGX
+					half roughness = __specularRoughnessPbr*__specularRoughnessPbr;
+					half nh = saturate(dot(normalWS, halfDir));
+					half spec = GGX(nh, saturate(roughness));
+					spec *= TCP2_PI * 0.05;
+					#ifdef UNITY_COLORSPACE_GAMMA
+						spec = max(0, sqrt(max(1e-4h, spec)));
+						half surfaceReduction = 1.0 - 0.28 * roughness * __specularRoughnessPbr;
+					#else
+						half surfaceReduction = 1.0 / (roughness*roughness + 1.0);
+					#endif
+					spec = max(0, spec * ndl);
+					spec *= surfaceReduction;
+					spec *= atten;
 					
 					//Apply specular
 					emission.rgb += spec * lightColor.rgb * __specularColor;
@@ -1320,6 +1347,14 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float __windFrequency = ( 1.0 );
 				float4 __windSineScale2 = ( float4(2.3,1.7,1.4,1.2) );
 				float __windSineStrength2 = ( .6 );
+				float4 __windSineScale3 = ( float4(1.3,2.9,2.1,0.8) );
+				float __windSineStrength3 = ( .5 );
+				float4 __windSineScale4 = ( float4(3.4,2.6,3.1,1.5) );
+				float __windSineStrength4 = ( .2 );
+				float4 __windSineScale5 = ( float4(1.4,2.3,2.7,1.1) );
+				float __windSineStrength5 = ( .4 );
+				float4 __windSineScale6 = ( float4(2.9,1.6,3.3,0.9) );
+				float __windSineStrength6 = ( .3 );
 				float3 __windDirection = ( _WindDirection.xyz );
 				float3 __windMask = ( input.vertexColor.rrr );
 				float __windStrength = ( _WindStrength );
@@ -1328,7 +1363,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				#if defined(TCP2_VERTEX_DISPLACEMENT)
 				worldPos.xyz += __vertexDisplacementWorld;
 				#endif
-				#if defined(TCP2_WIND)
 				// Wind Animation
 				float windTimeOffset = __windTimeOffset;
 				float windSpeed = __windSpeed;
@@ -1338,14 +1372,27 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 				float4 windSin2scale = __windSineScale2;
 				float windSin2strength = __windSineStrength2;
 				windFactor += sin(windPhase.xxx * windSin2scale.www + windFrequency * windSin2scale.xyz) * windSin2strength;
+				float4 windSin3scale = __windSineScale3;
+				float windSin3strength = __windSineStrength3;
+				windFactor += sin(windPhase.xxx * windSin3scale.www + windFrequency * windSin3scale.xyz) * windSin3strength;
+				float4 windSin4scale = __windSineScale4;
+				float windSin4strength = __windSineStrength4;
+				windFactor += sin(windPhase.xxx * windSin4scale.www + windFrequency * windSin4scale.xyz) * windSin4strength;
+				float4 windSin5scale = __windSineScale5;
+				float windSin5strength = __windSineStrength5;
+				windFactor += sin(windPhase.xxx * windSin5scale.www + windFrequency * windSin5scale.xyz) * windSin5strength;
+				float4 windSin6scale = __windSineScale6;
+				float windSin6strength = __windSineStrength6;
+				windFactor += sin(windPhase.xxx * windSin6scale.www + windFrequency * windSin6scale.xyz) * windSin6strength;
 				float3 windDir = normalize(__windDirection);
 				float3 windMask = __windMask;
 				float windStrength = __windStrength;
 				worldPos.xyz += windDir * windFactor * windMask * windStrength;
-				#endif
 				input.vertex.xyz = mul(unity_WorldToObject, float4(worldPos, 1)).xyz;
 				VertexPositionInputs vertexInput = GetVertexPositionInputs(input.vertex.xyz);
 				half3 viewDirWS = SafeNormalize(GetCameraPositionWS() - vertexInput.positionWS);
+				half ndv = abs(dot(viewDirWS, worldNormalUv));
+				half ndvRaw = ndv;
 
 				// Screen Space UV
 				float4 screenPos = ComputeScreenPos(vertexInput.positionCS);
@@ -1444,6 +1491,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			AlphaToMask On
 			ZWrite On
 			ZTest LEqual
+			Cull [_faceCulling]
 
 			HLSLPROGRAM
 			// Required to compile gles 2.0 with standard srp library
@@ -1464,7 +1512,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 
 			//--------------------------------------
 			// Toony Colors Pro 2 keywords
-			#pragma shader_feature_local_vertex TCP2_WIND
 			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 			#pragma shader_feature_local_vertex TCP2_VERTEX_DISPLACEMENT
 
@@ -1506,7 +1553,6 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 
 			//--------------------------------------
 			// Toony Colors Pro 2 keywords
-			#pragma shader_feature_local_vertex TCP2_WIND
 			#pragma shader_feature_local_fragment TCP2_DISSOLVE
 			#pragma shader_feature_local_vertex TCP2_VERTEX_DISPLACEMENT
 
@@ -1522,6 +1568,7 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 			}
 
 			ZWrite On
+			Cull [_faceCulling]
 
 			HLSLPROGRAM
 			#pragma exclude_renderers gles gles3 glcore
@@ -1547,5 +1594,5 @@ Shader "Toony Colors Pro 2/User/My TCP2 Shader"
 	CustomEditor "ToonyColorsPro.ShaderGenerator.MaterialInspector_SG2"
 }
 
-/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM_SIN","WIND_ANIM","WIND_SHADER_FEATURE","WIND_SIN_2","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","OCCLUSION","VERTEX_DISPLACEMENT_WORLD","DISSOLVE","DISSOLVE_CLIP","DISSOLVE_GRADIENT","DISSOLVE_SHADER_FEATURE","DITHER_LOD_8x8","TEXTURE_RAMP","TEXTURE_RAMP_2D","SKETCH_PROGRESSIVE_SMOOTH","SKETCH","TEXTURE_RAMP_SLIDERS","WORLD_NORMAL_FROM_BUMP","ALPHA_TESTING","ALPHA_TO_COVERAGE","ALPHA_TO_COVERAGE_RAW","AUTO_TRANSPARENT_BLENDING","ALPHA_TESTING_DITHERING","STENCIL","BACKFACE_LIGHTING_XYZ","GLOSSY_REFLECTIONS","REFLECTION_SHADER_FEATURE","REFLECTION_FRESNEL","REFLECTION_CUBEMAP","PLANAR_REFLECTION","REFL_ROUGH","SPECULAR_ANISOTROPIC","SPECULAR_NO_ATTEN","TEMPLATE_LWRP","SPECULAR_TOON"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="TransparentCutout",RampTextureDrawer="[NoScaleOffset]",RampTextureLabel="2D Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Occlusion";imps:list[imp_mp_texture(uto:False;tov:"";tov_lbl:"";gto:False;sbt:False;scr:False;scv:"";scv_lbl:"";gsc:False;roff:False;goff:False;sin_anm:False;sin_anmv:"";sin_anmv_lbl:"";gsin:False;notile:False;triplanar_local:False;def:"white";locked_uv:False;uv:0;cc:1;chan:"A";mip:-1;mipprop:False;ssuv_vert:False;ssuv_obj:False;uv_type:Texcoord;uv_chan:"XZ";tpln_scale:1;uv_shaderproperty:__NULL__;uv_cmp:__NULL__;sep_sampler:__NULL__;prop:"_Occlusion";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"61512a5d-a31f-43e4-9071-790e385835d8";op:Multiply;lbl:"Occlusion";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1),imp_mp_float(def:1;prop:"_Occlusion1";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"b4980ee5-6a81-447b-91c1-7acb0adfe451";op:Add;lbl:"Occlusion Float";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Blend Operation";imps:list[imp_enum(value_type:1;value:1;enum_type:"ToonyColorsPro.ShaderGenerator.BlendOperation";guid:"9b52cec5-21b0-4e06-a3d9-40ad972c0b1a";op:Multiply;lbl:"Blend Operation";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Threshold";imps:list[imp_mp_range(def:0.5;min:0.01;max:2;prop:"_RampThreshold";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"891ccb66-40a1-486c-8401-84c9cd84280e";op:Multiply;lbl:"Threshold";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Smoothing";imps:list[imp_mp_range(def:0.5;min:0.001;max:5;prop:"_RampSmoothing";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"352c395c-2071-4511-849b-1ed80ce39a1f";op:Multiply;lbl:"Smoothing";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Depth Test";imps:list[imp_enum(value_type:1;value:2;enum_type:"ToonyColorsPro.ShaderGenerator.CompareFunction";guid:"f15c875c-083b-48fb-8862-a1132f56eabe";op:Multiply;lbl:"Depth Test";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
-/* TCP_HASH 964a0f8f478cf27cbac26ae887f31189 */
+/* TCP_DATA u config(ver:"2.9.10";unity:"2022.3.45f1";tmplt:"SG2_Template_URP";features:list["UNITY_5_4","UNITY_5_5","UNITY_5_6","UNITY_2017_1","UNITY_2018_1","UNITY_2018_2","UNITY_2018_3","UNITY_2019_1","UNITY_2019_2","UNITY_2019_3","UNITY_2019_4","UNITY_2020_1","UNITY_2021_1","UNITY_2021_2","UNITY_2022_2","SHADOW_HSV","SHADOW_HSV_MASK","SPECULAR","SPECULAR_SHADER_FEATURE","EMISSION","RIM","RIM_SHADER_FEATURE","RIM_VERTEX","RIM_DIR_PERSP_CORRECTION","RIM_LIGHTMASK","SUBSURFACE_SCATTERING","SS_ALL_LIGHTS","SS_SCREEN_INFLUENCE","SUBSURFACE_AMB_COLOR","SS_MULTIPLICATIVE","SS_NO_LIGHTCOLOR","SS_SHADER_FEATURE","VERTEX_DISP_SHADER_FEATURE","BUMP","BUMP_SCALE","PARALLAX","BUMP_SHADER_FEATURE","TEXTURE_BLENDING","TEXBLEND_LINEAR","TEXBLEND_BUMP","TEXBLEND_NORMALIZE","TEXTURED_THRESHOLD","TT_SHADER_FEATURE","SHADOW_LINE","SHADOW_LINE_CRISP_AA","DIFFUSE_TINT","DIFFUSE_TINT_MASK","SKETCH_AMBIENT","SKETCH_SHADER_FEATURE","WIND_ANIM","ENABLE_DECALS","ENABLE_DEPTH_NORMALS_PASS","ENABLE_COOKIES","SSAO","ENABLE_DITHER_LOD","FOG","ENABLE_LIGHTMAP","ENABLE_LIGHT_LAYERS","ENABLE_RENDERING_LAYERS","ENABLE_FORWARD_PLUS","ENABLE_DOTS_INSTANCING","OCCLUSION","VERTEX_DISPLACEMENT_WORLD","DISSOLVE_GRADIENT","DISSOLVE_SHADER_FEATURE","DITHER_LOD_8x8","TEXTURE_RAMP","TEXTURE_RAMP_2D","SKETCH_PROGRESSIVE_SMOOTH","SKETCH","TEXTURE_RAMP_SLIDERS","WORLD_NORMAL_FROM_BUMP","ALPHA_TESTING","ALPHA_TO_COVERAGE","ALPHA_TO_COVERAGE_RAW","ALPHA_TESTING_DITHERING","STENCIL","BACKFACE_LIGHTING_XYZ","GLOSSY_REFLECTIONS","REFLECTION_SHADER_FEATURE","REFLECTION_FRESNEL","REFLECTION_CUBEMAP","PLANAR_REFLECTION","REFL_ROUGH","SPEC_PBR_GGX","WIND_ANIM_SIN","DISSOLVE","DISSOLVE_CLIP","CULLING","WIND_SIN_6","VSW_WORLDPOS","VSW_FOLLOWNORM","FOAM_ANIM","SMOOTH_FOAM","NO_FOAM_BACKFACE","AUTO_TRANSPARENT_BLENDING","OUTLINE_URP_FEATURE","TEMPLATE_LWRP"];flags:list[];flags_extra:dict[];keywords:dict[RENDER_TYPE="TransparentCutout",RampTextureDrawer="[NoScaleOffset]",RampTextureLabel="2D Ramp Texture",SHADER_TARGET="3.0",RIM_LABEL="Rim Lighting"];shaderProperties:list[,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Occlusion";imps:list[imp_mp_texture(uto:False;tov:"";tov_lbl:"";gto:False;sbt:False;scr:False;scv:"";scv_lbl:"";gsc:False;roff:False;goff:False;sin_anm:False;sin_anmv:"";sin_anmv_lbl:"";gsin:False;notile:False;triplanar_local:False;def:"white";locked_uv:False;uv:0;cc:1;chan:"A";mip:-1;mipprop:False;ssuv_vert:False;ssuv_obj:False;uv_type:Texcoord;uv_chan:"XZ";tpln_scale:1;uv_shaderproperty:__NULL__;uv_cmp:__NULL__;sep_sampler:__NULL__;prop:"_Occlusion";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"61512a5d-a31f-43e4-9071-790e385835d8";op:Multiply;lbl:"Occlusion";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1),imp_mp_float(def:1;prop:"_Occlusion1";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"b4980ee5-6a81-447b-91c1-7acb0adfe451";op:Add;lbl:"Occlusion Float";gpu_inst:False;dots_inst:False;locked:False;impl_index:-1)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,sp(name:"Parallax Height";imps:list[imp_mp_range(def:0.02;min:0;max:0.08;prop:"_Parallax";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"5b6df811-5f5a-4704-b13b-d4db4d908735";op:Multiply;lbl:"Height";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,sp(name:"Face Culling";imps:list[imp_enum(value_type:1;value:2;enum_type:"ToonyColorsPro.ShaderGenerator.Culling";guid:"107eddf4-2f97-4536-a297-6624c4c9dfe6";op:Multiply;lbl:"Face Culling";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),,,,,,,,,,,,,,,,,,,,,,sp(name:"Blend Operation";imps:list[imp_enum(value_type:1;value:1;enum_type:"ToonyColorsPro.ShaderGenerator.BlendOperation";guid:"9b52cec5-21b0-4e06-a3d9-40ad972c0b1a";op:Multiply;lbl:"Blend Operation";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Threshold";imps:list[imp_mp_range(def:0.5;min:0.01;max:2;prop:"_RampThreshold";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"891ccb66-40a1-486c-8401-84c9cd84280e";op:Multiply;lbl:"Threshold";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Ramp Smoothing";imps:list[imp_mp_range(def:0.5;min:0.001;max:5;prop:"_RampSmoothing";md:"";gbv:False;custom:False;refs:"";pnlock:False;guid:"352c395c-2071-4511-849b-1ed80ce39a1f";op:Multiply;lbl:"Smoothing";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False),sp(name:"Depth Test";imps:list[imp_enum(value_type:1;value:2;enum_type:"ToonyColorsPro.ShaderGenerator.CompareFunction";guid:"f15c875c-083b-48fb-8862-a1132f56eabe";op:Multiply;lbl:"Depth Test";gpu_inst:False;dots_inst:False;locked:False;impl_index:0)];layers:list[];unlocked:list[];layer_blend:dict[];custom_blend:dict[];clones:dict[];isClone:False)];customTextures:list[];codeInjection:codeInjection(injectedFiles:list[];mark:False);matLayers:list[]) */
+/* TCP_HASH f90c1584ae2c0e62dbd5834e19852a29 */

@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.cqf.urpvolumetricfog": {
+      "version": "https://github.com/CristianQiu/Unity-URP-Volumetric-Light.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.render-pipelines.universal": ""
+      },
+      "hash": "41d250dfcca17e69dafc2d7fcfe021f1db11f88d"
+    },
     "com.hexdogstudio.performance.fpslocker": {
       "version": "https://github.com/benedekmeszaros/unity-hextools-performance-fpslocker.git",
       "depth": 0,
