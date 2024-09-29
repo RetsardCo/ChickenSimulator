@@ -4,12 +4,15 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Unity.Burst.CompilerServices;
 
 public class GameManager : MonoBehaviour
 {
     [HideInInspector] public int days = 1;
     [HideInInspector] public int feedScore, drinkScore, cleanScore, medicateScore;
     [HideInInspector] public int feedMax, drinkMax, cleanMax, medicateMax;
+    int totalGoalScore;
+    int totalMaxScore;
     
     [Header("Daily Missions"), SerializeField]
     GameObject[] questLabels;
@@ -34,20 +37,39 @@ public class GameManager : MonoBehaviour
     [HideInInspector] public bool isMenuActive;
 
     [SerializeField] StorylineScript storylineScript;
+    [SerializeField] PlayerDetectorScript playerDetectorScript;
     [SerializeField] Transform spawnPoint;
     [SerializeField] Transform playerLocation;
 
+    [SerializeField] bool isInDevelopment;
+
+    [HideInInspector] public int goals;
+    [HideInInspector] public bool isDayOneClear;
+    [HideInInspector] public bool skipTheDay;
+
+    [HideInInspector] public bool isEveryMissionDone;
+
+    [SerializeField] AudioClip[] gameBGM;
+    [SerializeField] AudioSource gameAudioSource;
+
+    FeederScript[] feederScripts;
+    DrinkerScript drinkerScript;
+
     List<string> daily;
     string[] missions;
+
+    Coroutine dayNightCycle;
 
     private void Start() {
         isPaused = false;
         daily = new List<string>();
         missions = new string[] { "feed", "drink",/* "medicate",*/ "clean"};
         missionsBox.SetActive(false);
+        feederScripts = GameObject.FindObjectsOfType<FeederScript>();
+        drinkerScript = GameObject.FindObjectOfType<DrinkerScript>();
         isMenuActive = false;
         StartCoroutine(GameCycle());
-
+        StartCoroutine(GameBGMStart());
     }
 
     private void Update() {
@@ -66,10 +88,12 @@ public class GameManager : MonoBehaviour
                 Cursor.lockState = CursorLockMode.None;
             }
             else if (isMenuActive) {
-                missionsBox.SetActive(false);
-                isMenuActive = false;
-                Cursor.visible = false;
-                Cursor.lockState = CursorLockMode.Locked;
+                if (!storylineScript.storyOngoing) {
+                    missionsBox.SetActive(false);
+                    isMenuActive = false;
+                    Cursor.visible = false;
+                    Cursor.lockState = CursorLockMode.Locked;
+                }
             }
         }
 
@@ -84,8 +108,8 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.F1)) {
-            SceneManager.LoadScene("Layer");
+        if (Input.GetKeyDown(KeyCode.F1) && isInDevelopment) {
+            SceneManager.LoadScene("MainGame");
         }
     }
 
@@ -115,12 +139,18 @@ public class GameManager : MonoBehaviour
             storylineScript.whatLinesToDeliver = "tutorial";
             StartCoroutine(storylineScript.TypeLine());
         }
-        yield return StartCoroutine(skyboxManager.DayNight());
+        if (days == 1) {
+            StartCoroutine(skyboxManager.DayNight());
+            yield return new WaitUntil(() => skipTheDay);
+        }
+        else {
+            yield return StartCoroutine(skyboxManager.DayNight());
+        }
         //Time.timeScale = 1f;
     }
 
     public void SpecialCallEndOfDay() {
-        StartCoroutine(EndOfDay());
+        skipTheDay = true;
     }
 
     private IEnumerator EndOfDay() {
@@ -128,6 +158,7 @@ public class GameManager : MonoBehaviour
         bg.enabled = true;
         dayLabel.text = "Day " + days.ToString() + " ended.";
         ResetAllScores();
+        isInTransition = true;
         textAnimator.SetTrigger("StartOfDayEnter");
         yield return new WaitForSeconds(2.5f);
         bgAnimator.SetTrigger("BGFadeIn");
@@ -140,23 +171,59 @@ public class GameManager : MonoBehaviour
         foreach (string dailies in daily) {
             if (goal == dailies) {
                 Transform scoreTransform = questLabels[daily.IndexOf(goal)].transform.Find("current");
+                Transform checkmarkTransform = questLabels[daily.IndexOf(goal)].transform.Find("Checkmark");
                 if (scoreTransform != null) {
                     TextMeshProUGUI scoreText = scoreTransform.GetComponent<TextMeshProUGUI>();
                     if (scoreText != null) {
                         if (goal == "clean") {
                             scoreText.text = cleanScore.ToString();
+                            if (cleanScore == cleanMax) {
+                                checkmarkTransform.gameObject.SetActive(true);
+                                goals++;
+                            }
                         }
                         else if (goal == "feed") {
                             scoreText.text = feedScore.ToString();
+                            if (feedScore == feedMax) {
+                                checkmarkTransform.gameObject.SetActive(true);
+                                goals++;
+                            }
                         }
                         else if (goal == "drink") {
                             scoreText.text = drinkScore.ToString();
+                            if (drinkScore == drinkMax) {
+                                checkmarkTransform.gameObject.SetActive(true);
+                                goals++;
+                            }
                         }
                         else if (goal == "medicate") {
                             scoreText.text = medicateScore.ToString();
+                            if (medicateScore == medicateMax) {
+                                checkmarkTransform.gameObject.SetActive(true);
+                                goals++;
+                            }
                         }
                     }
                 }
+                EndOfDayGoalsAchieved();
+            }
+        }
+    }
+
+     public void EndOfDayGoalsAchieved() {
+        /*foreach (GameObject qLabels in questLabels) {
+            Transform checkmark = qLabels.transform.Find("Checkmark");
+            if (checkmark.gameObject.activeSelf) {
+                goals++;
+                Debug.Log("Current Goal Amount: " + goals);
+            }
+        }*/
+        Debug.Log("Current Goal Amount: " + goals);
+        if (goals == 3) {
+            isEveryMissionDone = true;
+            if (days == 1 && isDayOneClear) {
+                storylineScript.whatLinesToDeliver = "tutorial";
+                StartCoroutine(storylineScript.TypeLine());
             }
         }
     }
@@ -173,20 +240,52 @@ public class GameManager : MonoBehaviour
             StartCoroutine(BGDisappear());
         }
     }
+    IEnumerator GameBGMStart() {
+        int bgmIndex = Random.Range(0, gameBGM.Length);
+        yield return new WaitForSecondsRealtime(2f);
+
+        for (; ; ) {
+            gameAudioSource.clip = gameBGM[bgmIndex];
+            gameAudioSource.Play();
+
+            while (gameAudioSource.isPlaying) {
+                yield return null;
+            }
+
+            if (bgmIndex == 1) {
+                bgmIndex--;
+            }
+            else if (bgmIndex == 0) {
+                bgmIndex++;
+            }
+
+            yield return new WaitForSecondsRealtime(5f);
+        }
+    }
 
     public void PoopCount() {
         cleanScore++;
+        totalGoalScore++;
         GoalFind("clean");
     }
 
     public void FeedCount() {
         feedScore++;
+        totalGoalScore++;
         GoalFind("feed");
     }
 
     public void DrinkCount() {
         drinkScore++;
+        totalGoalScore++;
         GoalFind("drink");
+    }
+
+    void ResetFeederDrinker() {
+        for (int i = 0; i < feederScripts.Length; i++) {
+            feederScripts[i].hasContent = false;
+        }
+        drinkerScript.hasContent = false;
     }
 
     IEnumerator BGDisappear() {
@@ -195,9 +294,11 @@ public class GameManager : MonoBehaviour
     }
 
     void DayStart() {
+        ResetAllScores();
         daily.Clear();
         List<string> holder = new List<string>();
-        ResetAllScores();
+        isEveryMissionDone = false;
+        ResetFeederDrinker();
         for(int i = 0; i < 3; i++) {
             /*string checker = AddMissions();
             if (i > 0) {
@@ -310,20 +411,25 @@ public class GameManager : MonoBehaviour
         string scoreTarget = "";
         if (goal == "feed") {
             feedMax = 2;
+            totalMaxScore += feedMax;
             scoreTarget = feedMax.ToString();
         }
         else if (goal == "drink") {
             drinkMax = 1;
+            totalMaxScore += drinkMax;
             scoreTarget = drinkMax.ToString();
         }
         else if (goal == "medicate") {
             medicateMax = Random.Range(1, 6);
+            totalMaxScore += medicateMax;
             scoreTarget = medicateMax.ToString();
         }
         else if (goal == "clean") {
             /*poopManager.GetComponent<PoopManager>().Spawn();
             cleanScore = poopManager.GetComponent<PoopManager>().Poop();*/
             spawnPoop.PoopSpawn();
+            cleanMax = spawnPoop.GivePoopNumber();
+            totalMaxScore += cleanMax;
             scoreTarget = spawnPoop.GivePoopNumber().ToString();
             Debug.Log("Number to Spawn: " + scoreTarget);
             Debug.Log(cleanScore);
@@ -337,12 +443,22 @@ public class GameManager : MonoBehaviour
         drinkScore = 0;
         cleanScore = 0;
         medicateScore = 0;
+        goals = 0;
+        totalMaxScore = 0;
+        skipTheDay = false;
         foreach (GameObject go in questLabels) {
             Transform scoreTransform = go.transform.Find("current");
+            Transform checkmarkTransform = go.transform.Find("Checkmark");
             if (scoreTransform != null) {
                 TextMeshProUGUI scoreText = scoreTransform.GetComponent<TextMeshProUGUI>();
                 if (scoreText != null) {
                     scoreText.text = 0.ToString();
+                }
+            }
+            if (checkmarkTransform != null) {
+                GameObject checkMark = checkmarkTransform.gameObject;
+                if (checkMark != null) {
+                    checkMark.SetActive(false);
                 }
             }
         }

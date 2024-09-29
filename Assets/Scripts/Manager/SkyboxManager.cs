@@ -62,6 +62,9 @@ public class SkyboxManager : MonoBehaviour
                 DayNightCycle(timer / startTimer);
             }
             yield return null;
+            /*if (gameManager.skipTheDay) {
+                break;
+            }*/
         } while (timer > 0);
     }
 

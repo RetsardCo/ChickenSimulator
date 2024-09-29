@@ -10,6 +10,7 @@ public class PoopScript : MonoBehaviour
     
     private void Start() {
         rb = GetComponent<Rigidbody>();
+        gameManager = GameObject.FindAnyObjectByType<GameManager>();
         /*gameManager = GameObject.Find("Game Manager").GetComponent<GameManager>();
         storylineScript = GameObject.Find("Dialogue System").GetComponent<StorylineScript>();*/
     }
@@ -19,8 +20,11 @@ public class PoopScript : MonoBehaviour
     }
 
     private void OnDestroy() {
-        GameObject.Find("Game Manager").GetComponent<GameManager>().PoopCount();
-        
+        gameManager.PoopCount();
+        if (gameManager.goals == 3 && gameManager.days == 1) {
+            gameManager.isDayOneClear = true;
+            gameManager.EndOfDayGoalsAchieved();
+        }
     }
 
     private void OnTriggerEnter(Collider other) {

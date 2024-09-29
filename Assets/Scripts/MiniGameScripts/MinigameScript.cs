@@ -14,6 +14,7 @@ public class MinigameScript : MonoBehaviour
 
     [SerializeField] StorylineScript storylineScript;
     [SerializeField] GameManager gameManager;
+    [SerializeField] PlayerDetectorScript playerDetectorScript;
 
     [SerializeField] Button settingsButton;
     [SerializeField] Button missionsButton;
@@ -283,6 +284,8 @@ public class MinigameScript : MonoBehaviour
                 yield return StartCoroutine(storylineScript.TypeLine());
             }
             isFeederReady = false;
+            playerDetectorScript.feederScript.hasContent = true;
+            gameManager.FeedCount();
             yield return new WaitForSeconds(3.5f);
             feederInstructions.text = "Press Space to Continue...";
             //Debug.Log(isSpacePressed);
@@ -310,10 +313,16 @@ public class MinigameScript : MonoBehaviour
                 }
                 yield return StartCoroutine(storylineScript.TypeLine());
             }
+            playerDetectorScript.drinkerScript.hasContent = true;
+            gameManager.DrinkCount();
             yield return new WaitForSeconds(3.5f);
             drinkerInstructions.text = "Press Space to Continue...";
         }
         yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
+        if (gameManager.goals == 3 && gameManager.days == 1) {
+            gameManager.isDayOneClear = true;
+            gameManager.EndOfDayGoalsAchieved();
+        }
         //Debug.Log("Arrow Speed: " + minigameSpeed + " Max Arrow Angle: " + maxArrowAngle + " Is Arrow Speed <= maxArrowAngle?: " + (minigameSpeed <= maxArrowAngle));
         ResetValues();
         UnhideButtons();

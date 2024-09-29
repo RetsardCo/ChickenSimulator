@@ -101,10 +101,6 @@ public class StorylineScript : MonoBehaviour
                             menuAccessed = true;
                         }
                     }
-                    else if (currentStory > 9 && lockedDialogue) {
-                        //Debug.Log("I am called.");
-                        allTutorialsFinished = false;
-                    }
                     else {
                         NextLine();
                     }

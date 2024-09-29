@@ -9,8 +9,8 @@ public class PlayerDetectorScript : MonoBehaviour
     [SerializeField] MinigameScript gameScript;
     [SerializeField] StorylineScript storylineScript;
 
-    FeederScript feederScript;
-    DrinkerScript drinkerScript;
+    [HideInInspector]public FeederScript feederScript;
+    [HideInInspector]public DrinkerScript drinkerScript;
     PoopScript poopScript;
 
     bool feederDetected;
@@ -19,15 +19,15 @@ public class PlayerDetectorScript : MonoBehaviour
 
     private void Update() {
         if (Input.GetKeyDown(KeyCode.E)) {
-            if (feederDetected) {
+            if (feederDetected && !feederScript.hasContent && !storylineScript.storyOngoing) {
                 feederScript.FeederCalled();
                 gameScript.MiniGameCalled("feeder");
             }
-            else if (drinkerDetected) {
+            else if (drinkerDetected && !drinkerScript.hasContent && !storylineScript.storyOngoing) {
                 drinkerScript.DrinkerCalled();
                 gameScript.MiniGameCalled("drinker");
             }
-            else if (poopDetected) {
+            else if (poopDetected && !storylineScript.storyOngoing) {
                 poopScript.DeletePoop();
                 poopScript = null;
                 if (gameManager.days == 1 && !storylineScript.poopPickupTriggeredOnce) {
