@@ -26,6 +26,9 @@ public class GameManager : MonoBehaviour
     [Header("Skybox and Time Limit"), SerializeField]
     GameObject missionsBox;
 
+    [Header("Setting Panel"), SerializeField]
+    GameObject settingsPanel;
+
     [Header("Day Label")]
     [SerializeField] Image bg;
     [SerializeField] TextMeshProUGUI dayLabel;
@@ -100,10 +103,12 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape)) {
             if (!isPaused) {
                 Time.timeScale = 0f;
+                settingsPanel.SetActive(true);
                 isPaused = true;
             }
             else if (isPaused) {
                 Time.timeScale = 1f;
+                settingsPanel.SetActive(false);
                 isPaused = false;
             }
         }

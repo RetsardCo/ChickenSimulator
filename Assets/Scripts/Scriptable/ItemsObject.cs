@@ -33,5 +33,15 @@ public class ItemsObject:  ScriptableObject
     [field: SerializeField]
     public Sprite itemSprite { get; private set; }
 
+
+
+    public ItemsObject(ItemsObject item)
+    {
+        this.itemName = item.itemName;
+        this.itemSprite = item.itemSprite;
+        this.itemAmount = item.itemAmount;
+        this.isStackable = item.isStackable;
+    }
+
 }
 

@@ -136,10 +136,21 @@ public class ShopSystem : MonoBehaviour
         textPopUp.text = $"Purchased {item.itemName}";
         
         textPopUp.gameObject.SetActive(true);
-        inventory.AddItem(item);
+        ValidationPurchase(item);
         yield return new WaitForSeconds(2);
         textPopUp.gameObject.SetActive(false);
 
     }
-    
+
+    private void ValidationPurchase(ItemsObject item)
+    {
+        if (inventory.HaveSlot())
+        {
+            inventory.AddItem(item);
+        }
+        else
+        {
+            textPopUp.text = $"Inventory full, failed to purchase";
+        }
+    }
 }

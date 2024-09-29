@@ -34,21 +34,31 @@ public class InventorySystem : MonoBehaviour
     }
 
     #region Inventory System
+
+    public bool HaveSlot()
+    {
+        return items.Count < 8;
+    }
+
     public void AddItem(ItemsObject item)
     {
-       
-        if (inventory.TryGetValue(item, out InventorySlot InventorySlot))
+        
+ 
+        if (inventory.TryGetValue(item, out InventorySlot inventorySlot))
         {
-            InventorySlot.AddQuantity(item.itemAmount);
+            
+            inventorySlot.AddQuantity(item.itemAmount);
         }
         else
         {
-            InventorySlot newItem = new InventorySlot();
+            
+            InventorySlot newItemSlot = new InventorySlot();
             items.Add(item);
-            inventory.Add(item, newItem);
-            newItem.SetItem(item);  
+            inventory.Add(item, newItemSlot);
+            newItemSlot.SetItem(item);
         }
-
+        
+        
         UpdateUI(item);
     }
 
@@ -61,7 +71,7 @@ public class InventorySystem : MonoBehaviour
 
         if (existingSlot != null)
         {
-            TMP_Text quantityText = existingSlot.GetChild(1).GetComponent<TMP_Text>();
+            TMP_Text quantityText = existingSlot.GetChild(2).GetComponent<TMP_Text>();
             quantityText.text = inventory[item].quantity.ToString();
         }
         else
@@ -69,13 +79,14 @@ public class InventorySystem : MonoBehaviour
             GameObject newSlot = Instantiate (itemContainer, parentTransform);
             newSlot.name = item.itemName;
 
-            Image itemIcon = newSlot.transform.GetChild(0).GetComponent<Image>();   
-            TMP_Text quantityTxt = newSlot.transform.GetChild(1).GetComponent<TMP_Text>();
+            Image itemIcon = newSlot.transform.GetChild(1).GetComponent<Image>();   
+            TMP_Text quantityTxt = newSlot.transform.GetChild(2).GetComponent<TMP_Text>();
 
             itemIcon.sprite = item.itemSprite;
             quantityTxt.text = inventory[item].quantity.ToString();
 
             Button button = newSlot.GetComponent<Button>();
+            button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => OnItemClick(item));
         }
     }
@@ -113,7 +124,7 @@ public class InventorySystem : MonoBehaviour
     private void UpdateItemUI(ItemsObject item)
     {
         Transform itemSlot = parentTransform.Find(item.itemName);
-        Image Background = itemSlot.GetComponent<Image>();
+        Image Background = itemSlot.GetChild(0).GetComponent<Image>();
 
         if (inventory[item].isSelected)
         {

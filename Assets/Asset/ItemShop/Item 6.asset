@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b4f6c045f6271df4f936b54aede1b1ee, type: 3}
-  m_Name: Item 1
+  m_Name: Item 6
   m_EditorClassIdentifier: 
   <isStackable>k__BackingField: 0
-  <itemName>k__BackingField: Chick
+  <itemName>k__BackingField: kikiam
   <itemDescription>k__BackingField: 2-4 weeks old
   <itemPrice>k__BackingField: 100
   <itemAmount>k__BackingField: 1
-  <itemSprite>k__BackingField: {fileID: 21300000, guid: 776cc379318e40a43a43d311bf097862,
+  <itemSprite>k__BackingField: {fileID: 21300000, guid: 9d1961aaedb213c40a358565e6473063,
     type: 3}
