@@ -6911,7 +6911,6 @@ MonoBehaviour:
   gameManager: {fileID: 74545933}
   settingsButton: {fileID: 1713613612}
   missionsButton: {fileID: 1839626406}
-  inventoryButton: {fileID: 0}
   globalVolume: {fileID: 832575518}
   minArrowAngle: 90
   maxArrowAngle: -90
@@ -9476,6 +9475,7 @@ MonoBehaviour:
   - Well, we're done with today's task!
   - Let's go ahead and end the day, and rest for now.
   - Tomorrow, you'll go do the tasks I gave you, okay?
+  menuAccessed: 0
   poopCleanupDialogue:
   - Look at that! Our barn is currently dirty with all that chicken poop!
   - Here's what we need to do!
@@ -9483,8 +9483,8 @@ MonoBehaviour:
   poopPickupDialogue:
   - That's it! You got it! You cleaned your first chicken poop!
   - You actually learn quick!
-  needToCleanPoop: 0
   poopStory: 0
+  poopPickupTriggeredOnce: 0
   feederTutorialDialogue:
   - Here, we have the chicken feeder.
   - As the name suggests, this is where the chicken feeds.
@@ -9507,6 +9507,7 @@ MonoBehaviour:
   - But that's fine. I'll level this out.
   - Just remember to do it just right next time, okay?
   feederStory: 0
+  feederTriggeredOnce: 0
   drinkerTutorialDialogue:
   - Here's the chicken drinker. This is where the chickens drink.
   - It's empty.
@@ -9515,7 +9516,7 @@ MonoBehaviour:
   - Not too little, not too much, just right.
   - Go ahead and fill them up!
   drinkerJustRightDialogue:
-  - 'You filled thedrinker with just the right amount of water! '
+  - 'You filled the drinker with just the right amount of water! '
   - You're learning quick!
   - Always remember that we fill the chickens' drinker our chicken just right amount,
     my child.
@@ -9530,6 +9531,7 @@ MonoBehaviour:
   - Just remember that we fill it with just the right amount, okay?
   - Let me fix that for you.
   drinkerStory: 0
+  drinkerTriggeredOnce: 0
   whereAreYouGoingDialogue:
   - Where are you going, my child?
   - Don't go off alone. It's dangerous outside!
@@ -10547,8 +10549,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   poopObject: {fileID: 7910257246975058761, guid: 8df32a289d2ffce4fb2c498f30420603,
     type: 3}
-  x1: 8.1
-  z1: 54.6
+  x1: 15.3
+  z1: 57.7
   x2: 130.4
   z2: 91.7
   y: 11

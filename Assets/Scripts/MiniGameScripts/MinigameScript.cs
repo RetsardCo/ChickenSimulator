@@ -17,7 +17,7 @@ public class MinigameScript : MonoBehaviour
 
     [SerializeField] Button settingsButton;
     [SerializeField] Button missionsButton;
-    [SerializeField] Button inventoryButton;
+    //[SerializeField] Button inventoryButton;
 
     [SerializeField] Volume globalVolume;
 
@@ -130,7 +130,7 @@ public class MinigameScript : MonoBehaviour
             }
             threeColors.localEulerAngles = new Vector3(0, 0, threshold);
             feedingMinigameScreen.SetActive(true);
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.feederTriggeredOnce) {
                 storylineScript.whatLinesToDeliver = "feeder";
                 StartCoroutine(storylineScript.TypeLine());
             }
@@ -146,8 +146,8 @@ public class MinigameScript : MonoBehaviour
             maximumTarget = targetAmount + addMinus;
             drinkerTarget.localPosition = new Vector3(targetPositionX, targetAmount, 0);
             drinkingMinigameScreen.SetActive(true);
-            if (gameManager.days == 1) {
-                storylineScript.whatLinesToDeliver = "feeder";
+            if (gameManager.days == 1 && !storylineScript.drinkerTriggeredOnce) {
+                storylineScript.whatLinesToDeliver = "drinker";
                 StartCoroutine(storylineScript.TypeLine());
             }
         }
@@ -157,13 +157,13 @@ public class MinigameScript : MonoBehaviour
     void HideButtons() {
         settingsButton.gameObject.SetActive(false);
         missionsButton.gameObject.SetActive(false);
-        inventoryButton.gameObject.SetActive(false);
+        //inventoryButton.gameObject.SetActive(false);
     }
 
     void UnhideButtons() {
         settingsButton.gameObject.SetActive(true);
         missionsButton.gameObject.SetActive(true);
-        inventoryButton.gameObject.SetActive(true);
+        //inventoryButton.gameObject.SetActive(true);
     }
 
     void FeederMinigame() {
@@ -270,7 +270,7 @@ public class MinigameScript : MonoBehaviour
                 }
             }
 
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.feederTriggeredOnce) {
                 if (feederMinigameText.text == "Just Right!") {
                     storylineScript.whatLinesToDeliver = "feederRight";
                 }
@@ -298,7 +298,7 @@ public class MinigameScript : MonoBehaviour
             else if (drinkerSlider.value > maximumTarget) {
                 drinkerMinigameText.text = "Way Too Much!";
             }
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.drinkerTriggeredOnce) {
                 if (drinkerMinigameText.text == "Just Right!") {
                     storylineScript.whatLinesToDeliver = "drinkerRight";
                 }

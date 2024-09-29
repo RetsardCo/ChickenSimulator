@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
             if (!isMenuActive) {
                 missionsBox.SetActive(true);
                 isMenuActive = true;
-                if (days == 1) {
+                if (days == 1 && !storylineScript.menuAccessed) {
                     StartCoroutine(storylineScript.TypeLine());
                 }
                 Cursor.visible = true;
@@ -163,12 +163,14 @@ public class GameManager : MonoBehaviour
 
     public IEnumerator ResetPlayerLocation(float waitTime, bool comingFromGameManager) {
         if (!comingFromGameManager) {
+            bg.enabled = true;
             bgAnimator.SetTrigger("BGFadeIn");
         }
         yield return new WaitForSeconds(waitTime);
         playerLocation.transform.position = spawnPoint.transform.position;
         if (!comingFromGameManager) {
             bgAnimator.SetTrigger("BGFadeOut");
+            StartCoroutine(BGDisappear());
         }
     }
 

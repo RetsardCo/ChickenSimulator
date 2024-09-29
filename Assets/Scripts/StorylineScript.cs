@@ -20,13 +20,15 @@ public class StorylineScript : MonoBehaviour
     bool stopClicking;
 
     [SerializeField] string[] dayOneTutorialDialogues;
+    [HideInInspector] public bool menuAccessed;
     int currentStory;
 
     [Header("Poop Cleaning Tutorial Dialogue")]
     [SerializeField] string[] poopCleanupDialogue;
     [SerializeField] string[] poopPickupDialogue;
-    [HideInInspector] public bool needToCleanPoop;
+    //[HideInInspector] public bool needToCleanPoop;
     [HideInInspector] public int poopStory;
+    [HideInInspector] public bool poopPickupTriggeredOnce;
 
     [Header("Feeder Tutorial Dialogue")]
     [SerializeField] string[] feederTutorialDialogue;
@@ -34,6 +36,7 @@ public class StorylineScript : MonoBehaviour
     [SerializeField] string[] feederTooMuchDialogue;
     [SerializeField] string[] feederTooLittleDialogue;
     [HideInInspector] public int feederStory;
+    [HideInInspector] public bool feederTriggeredOnce;
 
     [Header("Drinker Tutorial Dialogue")]
     [SerializeField] string[] drinkerTutorialDialogue;
@@ -41,6 +44,7 @@ public class StorylineScript : MonoBehaviour
     [SerializeField] string[] drinkerTooLittleDialogue;
     [SerializeField] string[] drinkerTooMuchDialogue;
     [HideInInspector] public int drinkerStory;
+    [HideInInspector] public bool drinkerTriggeredOnce;
 
     [Header("Going Beyond Dialogue")]
     [SerializeField] string[] whereAreYouGoingDialogue;
@@ -82,26 +86,48 @@ public class StorylineScript : MonoBehaviour
                         storyText.text = string.Empty;
                         currentStory++;
                     }
-                    else if (currentStory == 7 || currentStory == 9) {
+                    else if (currentStory == 7) {
                         HideDialogue();
                         currentDialogue = string.Empty;
                         storyText.text = string.Empty;
                         currentStory++;
-                        StopAllCoroutines();
+                    }
+                    else if (currentStory == 9) {
+                        if (!menuAccessed) {
+                            HideDialogue();
+                            currentDialogue = string.Empty;
+                            storyText.text = string.Empty;
+                            currentStory++;
+                            menuAccessed = true;
+                        }
                     }
                     else if (currentStory > 9 && lockedDialogue) {
+                        //Debug.Log("I am called.");
                         allTutorialsFinished = false;
                     }
                     else {
                         NextLine();
                     }
                 }
-                else if(whatLinesToDeliver == "poop"){
-                    if (poopStory > poopCleanupDialogue.Length - 1) {
+                else if (whatLinesToDeliver == "feeder") {
+                    if (feederStory == 3) {
                         HideDialogue();
+                        currentDialogue = string.Empty;
+                        storyText.text = string.Empty;
+                        feederStory++;
                     }
                     else {
-                        //Debug.Log("I am Called.");
+                        NextLine();
+                    }
+                }
+                else if (whatLinesToDeliver == "drinker") {
+                    if (drinkerStory == 2) {
+                        HideDialogue();
+                        currentDialogue = string.Empty;
+                        storyText.text = string.Empty;
+                        drinkerStory++;
+                    }
+                    else {
                         NextLine();
                     }
                 }
@@ -121,6 +147,9 @@ public class StorylineScript : MonoBehaviour
         drinkerStory = 0;
         feederStory = 0;
         whereStory = 0;
+        poopPickupTriggeredOnce = false;
+        feederTriggeredOnce = false;
+
     }
 
     public IEnumerator TypeLine() {
@@ -144,32 +173,53 @@ public class StorylineScript : MonoBehaviour
             currentDialogue = whereAreYouGoingDialogue[whereStory];
         }
         else if (whatLinesToDeliver == "poopCleanUp") {
-            poopStory = 0;
+            if (!poopPickupTriggeredOnce) {
+                poopStory = 0;
+                poopPickupTriggeredOnce = true;
+            }
             currentDialogue = poopPickupDialogue[poopStory];
         }
         else if(whatLinesToDeliver == "feederRight") {
-            feederStory = 0;
+            if (!feederTriggeredOnce){
+                feederStory = 0;
+                feederTriggeredOnce = true;
+            }
             currentDialogue = feederJustRightDialogue[feederStory];
         }
         else if (whatLinesToDeliver == "feederLow") {
-            feederStory = 0;
+            if (!feederTriggeredOnce) {
+                feederStory = 0;
+                feederTriggeredOnce = true;
+            }
             currentDialogue = feederTooLittleDialogue[feederStory];
         }
         else if (whatLinesToDeliver == "feederHigh") {
-            feederStory = 0;
+            if (!feederTriggeredOnce) {
+                feederStory = 0;
+                feederTriggeredOnce = true;
+            }
             currentDialogue = feederTooMuchDialogue[feederStory];
         }
         else if (whatLinesToDeliver == "drinkerRight") {
-            drinkerStory = 0;
-            currentDialogue = drinkerJustRightDialogue[feederStory];
+            if (!drinkerTriggeredOnce) {
+                drinkerStory = 0;
+                drinkerTriggeredOnce = true;
+            }
+            currentDialogue = drinkerJustRightDialogue[drinkerStory];
         }
         else if (whatLinesToDeliver == "drinkerLow") {
-            drinkerStory = 0;
-            currentDialogue = drinkerTooLittleDialogue[feederStory];
+            if (!drinkerTriggeredOnce) {
+                drinkerStory = 0;
+                drinkerTriggeredOnce = true;
+            }
+            currentDialogue = drinkerTooLittleDialogue[drinkerStory];
         }
         else if (whatLinesToDeliver == "drinkerHigh") {
-            drinkerStory = 0;
-            currentDialogue = drinkerTooMuchDialogue[feederStory];
+            if (!drinkerTriggeredOnce) {
+                drinkerStory = 0;
+                drinkerTriggeredOnce = true;
+            }
+            currentDialogue = drinkerTooMuchDialogue[drinkerStory];
         }
         stopClicking = true;
         foreach (char c in currentDialogue.ToCharArray()) {
@@ -190,6 +240,7 @@ public class StorylineScript : MonoBehaviour
             else {
                 HideDialogue();
                 gameManager.SpecialCallEndOfDay();
+                return;
             }
 
             if (currentStory == 2) {
@@ -203,6 +254,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "feeder") {
@@ -211,11 +263,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
-            }
-
-            if (feederStory == 3) {
-                HideDialogue();
-                //feederStory++;
+                return;
             }
         }
         else if (whatLinesToDeliver == "drinker") {
@@ -224,11 +272,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
-            }
-
-            if (drinkerStory == 2) {
-                HideDialogue();
-                //drinkerStory++;
+                return;
             }
         }
         else if (whatLinesToDeliver == "escape") {
@@ -237,9 +281,11 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 currentDialogue = string.Empty;
+                storyText.text = string.Empty;
                 HideDialogue();
-                //StartCoroutine(gameManager.ResetPlayerLocation(2.5f, false));
-               //detector.enabled = true;
+                StartCoroutine(gameManager.ResetPlayerLocation(2.5f, false));
+                return;
+                //detector.enabled = true;
             }
         }
         else if (whatLinesToDeliver == "poopCleanUp") {
@@ -248,6 +294,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "feederRight") {
@@ -256,6 +303,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "feederLow") {
@@ -264,6 +312,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "feederHigh") {
@@ -272,6 +321,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "drinkerRight") {
@@ -280,6 +330,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "drinkerLow") {
@@ -288,6 +339,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         else if (whatLinesToDeliver == "drinkerHigh") {
@@ -296,6 +348,7 @@ public class StorylineScript : MonoBehaviour
             }
             else {
                 HideDialogue();
+                return;
             }
         }
         storyText.text = string.Empty;
@@ -314,6 +367,8 @@ public class StorylineScript : MonoBehaviour
     void HideDialogue() {
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
+        storyText.text = string.Empty;
+        currentDialogue = string.Empty;
         storylineCanvas.SetActive(false);
         storyOngoing = false;
     }

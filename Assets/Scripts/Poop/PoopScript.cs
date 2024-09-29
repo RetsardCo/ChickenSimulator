@@ -10,8 +10,8 @@ public class PoopScript : MonoBehaviour
     
     private void Start() {
         rb = GetComponent<Rigidbody>();
-        gameManager = GameObject.Find("Game Manager").GetComponent<GameManager>();
-        storylineScript = GameObject.Find("Dialogue System").GetComponent<StorylineScript>();
+        /*gameManager = GameObject.Find("Game Manager").GetComponent<GameManager>();
+        storylineScript = GameObject.Find("Dialogue System").GetComponent<StorylineScript>();*/
     }
 
     private void Update() {
@@ -32,10 +32,6 @@ public class PoopScript : MonoBehaviour
     }
 
     public void DeletePoop() {
-        if (gameManager.days == 1) {
-            storylineScript.whatLinesToDeliver = "poopCleanUp";
-            StartCoroutine(storylineScript.TypeLine());
-        }
         Destroy(gameObject);
     }
 }
