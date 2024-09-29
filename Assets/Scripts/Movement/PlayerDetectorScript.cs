@@ -9,8 +9,8 @@ public class PlayerDetectorScript : MonoBehaviour
     [SerializeField] MinigameScript gameScript;
     [SerializeField] StorylineScript storylineScript;
 
-    FeederScript feederScript;
-    DrinkerScript drinkerScript;
+    [HideInInspector]public FeederScript feederScript;
+    [HideInInspector]public DrinkerScript drinkerScript;
     PoopScript poopScript;
 
     bool feederDetected;
@@ -19,26 +19,34 @@ public class PlayerDetectorScript : MonoBehaviour
 
     private void Update() {
         if (Input.GetKeyDown(KeyCode.E)) {
-            if (feederDetected) {
+            if (feederDetected && !feederScript.hasContent && !storylineScript.storyOngoing) {
                 feederScript.FeederCalled();
                 gameScript.MiniGameCalled("feeder");
             }
-            else if (drinkerDetected) {
+            else if (drinkerDetected && !drinkerScript.hasContent && !storylineScript.storyOngoing) {
                 drinkerScript.DrinkerCalled();
                 gameScript.MiniGameCalled("drinker");
             }
-            else if (poopDetected) {
+            else if (poopDetected && !storylineScript.storyOngoing) {
                 poopScript.DeletePoop();
                 poopScript = null;
+                if (gameManager.days == 1 && !storylineScript.poopPickupTriggeredOnce) {
+                    storylineScript.whatLinesToDeliver = "poopCleanUp";
+                    StartCoroutine(storylineScript.TypeLine());
+                }
             }
         }
     }
 
     private void OnTriggerEnter(Collider other) {
+        if (storylineScript.storyOngoing) {
+            return;
+        }
+
         if (other.CompareTag("Feed")) {
             feederDetected = true;
             feederScript = other.GetComponent<FeederScript>();
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.feederTriggeredOnce) {
                 storylineScript.whatLinesToDeliver = "feeder";
                 StartCoroutine(storylineScript.TypeLine());
             }
@@ -47,7 +55,7 @@ public class PlayerDetectorScript : MonoBehaviour
         if (other.CompareTag("Drinker")) {
             drinkerDetected = true;
             drinkerScript = other.GetComponent<DrinkerScript>();
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.drinkerTriggeredOnce) {
                 storylineScript.whatLinesToDeliver = "drinker";
                 StartCoroutine(storylineScript.TypeLine());
             }
@@ -56,7 +64,7 @@ public class PlayerDetectorScript : MonoBehaviour
         if (other.CompareTag("Poop")) {
             poopDetected = true;
             poopScript = other.GetComponent<PoopScript>();
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.poopPickupTriggeredOnce) {
                 Debug.Log("I am Called");
                 storylineScript.whatLinesToDeliver = "poop";
                 StartCoroutine(storylineScript.TypeLine());
@@ -64,7 +72,7 @@ public class PlayerDetectorScript : MonoBehaviour
         }
 
         if (other.CompareTag("ExitArea")) {
-            gameObject.GetComponent<SphereCollider>().enabled = false;
+            //gameObject.GetComponent<SphereCollider>().enabled = false;
             storylineScript.whatLinesToDeliver = "escape";
             StartCoroutine(storylineScript.TypeLine());
         }

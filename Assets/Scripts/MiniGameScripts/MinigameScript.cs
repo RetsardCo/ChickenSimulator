@@ -14,10 +14,11 @@ public class MinigameScript : MonoBehaviour
 
     [SerializeField] StorylineScript storylineScript;
     [SerializeField] GameManager gameManager;
+    [SerializeField] PlayerDetectorScript playerDetectorScript;
 
     [SerializeField] Button settingsButton;
     [SerializeField] Button missionsButton;
-    [SerializeField] Button inventoryButton;
+    //[SerializeField] Button inventoryButton;
 
     [SerializeField] Volume globalVolume;
 
@@ -130,7 +131,7 @@ public class MinigameScript : MonoBehaviour
             }
             threeColors.localEulerAngles = new Vector3(0, 0, threshold);
             feedingMinigameScreen.SetActive(true);
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.feederTriggeredOnce) {
                 storylineScript.whatLinesToDeliver = "feeder";
                 StartCoroutine(storylineScript.TypeLine());
             }
@@ -146,8 +147,8 @@ public class MinigameScript : MonoBehaviour
             maximumTarget = targetAmount + addMinus;
             drinkerTarget.localPosition = new Vector3(targetPositionX, targetAmount, 0);
             drinkingMinigameScreen.SetActive(true);
-            if (gameManager.days == 1) {
-                storylineScript.whatLinesToDeliver = "feeder";
+            if (gameManager.days == 1 && !storylineScript.drinkerTriggeredOnce) {
+                storylineScript.whatLinesToDeliver = "drinker";
                 StartCoroutine(storylineScript.TypeLine());
             }
         }
@@ -157,13 +158,13 @@ public class MinigameScript : MonoBehaviour
     void HideButtons() {
         settingsButton.gameObject.SetActive(false);
         missionsButton.gameObject.SetActive(false);
-        inventoryButton.gameObject.SetActive(false);
+        //inventoryButton.gameObject.SetActive(false);
     }
 
     void UnhideButtons() {
         settingsButton.gameObject.SetActive(true);
         missionsButton.gameObject.SetActive(true);
-        inventoryButton.gameObject.SetActive(true);
+        //inventoryButton.gameObject.SetActive(true);
     }
 
     void FeederMinigame() {
@@ -270,7 +271,7 @@ public class MinigameScript : MonoBehaviour
                 }
             }
 
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.feederTriggeredOnce) {
                 if (feederMinigameText.text == "Just Right!") {
                     storylineScript.whatLinesToDeliver = "feederRight";
                 }
@@ -283,6 +284,8 @@ public class MinigameScript : MonoBehaviour
                 yield return StartCoroutine(storylineScript.TypeLine());
             }
             isFeederReady = false;
+            playerDetectorScript.feederScript.hasContent = true;
+            gameManager.FeedCount();
             yield return new WaitForSeconds(3.5f);
             feederInstructions.text = "Press Space to Continue...";
             //Debug.Log(isSpacePressed);
@@ -298,7 +301,7 @@ public class MinigameScript : MonoBehaviour
             else if (drinkerSlider.value > maximumTarget) {
                 drinkerMinigameText.text = "Way Too Much!";
             }
-            if (gameManager.days == 1) {
+            if (gameManager.days == 1 && !storylineScript.drinkerTriggeredOnce) {
                 if (drinkerMinigameText.text == "Just Right!") {
                     storylineScript.whatLinesToDeliver = "drinkerRight";
                 }
@@ -310,10 +313,16 @@ public class MinigameScript : MonoBehaviour
                 }
                 yield return StartCoroutine(storylineScript.TypeLine());
             }
+            playerDetectorScript.drinkerScript.hasContent = true;
+            gameManager.DrinkCount();
             yield return new WaitForSeconds(3.5f);
             drinkerInstructions.text = "Press Space to Continue...";
         }
         yield return new WaitUntil(() => Input.GetKeyDown(KeyCode.Space));
+        if (gameManager.goals == 3 && gameManager.days == 1) {
+            gameManager.isDayOneClear = true;
+            gameManager.EndOfDayGoalsAchieved();
+        }
         //Debug.Log("Arrow Speed: " + minigameSpeed + " Max Arrow Angle: " + maxArrowAngle + " Is Arrow Speed <= maxArrowAngle?: " + (minigameSpeed <= maxArrowAngle));
         ResetValues();
         UnhideButtons();
