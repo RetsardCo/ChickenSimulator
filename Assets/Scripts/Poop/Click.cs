@@ -59,6 +59,7 @@ public class Click : MonoBehaviour
     private void OnDestroy()
     {
         poopClicked = true;
+        //GameObject.Find("Game Manager").GetComponent<GameManager>().PoopCount();
         Debug.Log("destroyed");
     }
 
