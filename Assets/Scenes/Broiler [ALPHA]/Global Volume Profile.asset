@@ -212,8 +212,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   active: 1
   distance:
-    m_OverrideState: 0
-    m_Value: 128
+    m_OverrideState: 1
+    m_Value: 512
   baseHeight:
     m_OverrideState: 1
     m_Value: 0
@@ -221,20 +221,20 @@ MonoBehaviour:
     m_OverrideState: 1
     m_Value: 50
   density:
-    m_OverrideState: 0
-    m_Value: 0.2
+    m_OverrideState: 1
+    m_Value: 1
   attenuationDistance:
-    m_OverrideState: 0
-    m_Value: 128
+    m_OverrideState: 1
+    m_Value: 4096
   tint:
-    m_OverrideState: 0
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_OverrideState: 1
+    m_Value: {r: 0.15566039, g: 0.50034845, b: 1, a: 1}
   mainLightAnisotropy:
-    m_OverrideState: 0
-    m_Value: 0.4
+    m_OverrideState: 1
+    m_Value: 0
   mainLightScattering:
-    m_OverrideState: 0
-    m_Value: 0.15
+    m_OverrideState: 1
+    m_Value: 0.027
   additionalLightsAnisotropy:
     m_OverrideState: 0
     m_Value: 0.25
@@ -245,11 +245,11 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 0.2
   maxSteps:
-    m_OverrideState: 0
-    m_Value: 64
+    m_OverrideState: 1
+    m_Value: 256
   blurIterations:
-    m_OverrideState: 0
-    m_Value: 2
+    m_OverrideState: 1
+    m_Value: 4
   enabled:
     m_OverrideState: 1
-    m_Value: 0
+    m_Value: 1
