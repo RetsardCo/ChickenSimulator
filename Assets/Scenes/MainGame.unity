@@ -824,6 +824,8 @@ MonoBehaviour:
   skyboxManager: {fileID: 74545932}
   missionsBox: {fileID: 1584868630}
   settingsPanel: {fileID: 2038872403289994347}
+  shopPanel: {fileID: 1407796855}
+  inventoryPanel: {fileID: 1177081226}
   bg: {fileID: 749045851}
   dayLabel: {fileID: 1306746546}
   textAnimator: {fileID: 1306746548}
@@ -7547,6 +7549,12 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1173938839}
   m_CullTransparentMesh: 1
+--- !u!1 &1177081226 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6894653868210766312, guid: 0d332f244e690df439376705dd002a57,
+    type: 3}
+  m_PrefabInstance: {fileID: 1797687609}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1198715633
 GameObject:
   m_ObjectHideFlags: 0
@@ -15718,10 +15726,10 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 633210663}
-        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
-        m_MethodName: SetActive
-        m_Mode: 6
+      - m_Target: {fileID: 74545933}
+        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+        m_MethodName: UnpauseGame
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

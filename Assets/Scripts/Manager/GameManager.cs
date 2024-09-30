@@ -29,6 +29,12 @@ public class GameManager : MonoBehaviour
     [Header("Setting Panel"), SerializeField]
     GameObject settingsPanel;
 
+    [Header("Shop Panel"), SerializeField]
+    GameObject shopPanel;
+
+    [Header("Inventory Panel"), SerializeField]
+    GameObject inventoryPanel;
+
     [Header("Day Label")]
     [SerializeField] Image bg;
     [SerializeField] TextMeshProUGUI dayLabel;
@@ -38,6 +44,8 @@ public class GameManager : MonoBehaviour
     [HideInInspector] public bool isPaused;
     [HideInInspector] public bool isInTransition;
     [HideInInspector] public bool isMenuActive;
+    bool isShopActive;
+    bool isInventoryActive;
 
     [SerializeField] StorylineScript storylineScript;
     [SerializeField] PlayerDetectorScript playerDetectorScript;
@@ -65,6 +73,8 @@ public class GameManager : MonoBehaviour
 
     private void Start() {
         isPaused = false;
+        isShopActive = false;
+        isInventoryActive = false;
         daily = new List<string>();
         missions = new string[] { "feed", "drink",/* "medicate",*/ "clean"};
         missionsBox.SetActive(false);
@@ -101,21 +111,81 @@ public class GameManager : MonoBehaviour
         }
 
         if (Input.GetKeyDown(KeyCode.Escape)) {
-            if (!isPaused) {
-                Time.timeScale = 0f;
-                settingsPanel.SetActive(true);
-                isPaused = true;
+            if (!isPaused && !storylineScript.storyOngoing) {
+                PauseGame();
             }
             else if (isPaused) {
-                Time.timeScale = 1f;
-                settingsPanel.SetActive(false);
-                isPaused = false;
+                UnpauseGame();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.I)) {
+            if (!isInventoryActive && !isPaused) {
+                CallInventory();
+            }
+            if (isInventoryActive && !isPaused) {
+                UncallInventory();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.P)) {
+            if (!isShopActive && !isPaused) {
+                CallShop();
+            }
+            if (isShopActive && !isPaused) {
+                UncallShop();
             }
         }
 
         if (Input.GetKeyDown(KeyCode.F1) && isInDevelopment) {
             SceneManager.LoadScene("MainGame");
         }
+    }
+
+    public void CallInventory() {
+        isInventoryActive = true;
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        inventoryPanel.SetActive(true);
+    }
+
+    public void UncallInventory() {
+        isInventoryActive = false;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        inventoryPanel.SetActive(false);
+    }
+
+    public void CallShop(){
+        Time.timeScale = 0f;
+        isShopActive = true;
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        shopPanel.SetActive(true);
+    }
+
+    public void UncallShop() {
+        Time.timeScale = 1f;
+        isShopActive = false;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        shopPanel.SetActive(false);
+    }
+
+    public void PauseGame() {
+        Time.timeScale = 0f;
+        settingsPanel.SetActive(true);
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        isPaused = true;
+    }
+
+    public void UnpauseGame() {
+        Time.timeScale = 1f;
+        settingsPanel.SetActive(false);
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+        isPaused = false;
     }
 
     private IEnumerator GameCycle() {

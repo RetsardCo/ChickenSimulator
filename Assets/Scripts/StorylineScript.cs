@@ -149,80 +149,82 @@ public class StorylineScript : MonoBehaviour
     }
 
     public IEnumerator TypeLine() {
-        storyOngoing = true;
-        Cursor.visible = true;
-        Cursor.lockState = CursorLockMode.None;
-        storylineCanvas.SetActive(true);
-        if (whatLinesToDeliver == "tutorial") {
-            currentDialogue = dayOneTutorialDialogues[currentStory];
-        }
-        else if (whatLinesToDeliver == "poop") {
-            currentDialogue = poopCleanupDialogue[poopStory];
-        }
-        else if (whatLinesToDeliver == "feeder") {
-            currentDialogue = feederTutorialDialogue[feederStory];
-        }
-        else if (whatLinesToDeliver == "drinker") {
-            currentDialogue = drinkerTutorialDialogue[drinkerStory];
-        }
-        else if (whatLinesToDeliver == "escape") {
-            currentDialogue = whereAreYouGoingDialogue[whereStory];
-        }
-        else if (whatLinesToDeliver == "poopCleanUp") {
-            if (!poopPickupTriggeredOnce) {
-                poopStory = 0;
-                poopPickupTriggeredOnce = true;
+        if (!gameManager.isPaused) {
+            storyOngoing = true;
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+            storylineCanvas.SetActive(true);
+            if (whatLinesToDeliver == "tutorial") {
+                currentDialogue = dayOneTutorialDialogues[currentStory];
             }
-            currentDialogue = poopPickupDialogue[poopStory];
-        }
-        else if(whatLinesToDeliver == "feederRight") {
-            if (!feederTriggeredOnce){
-                feederStory = 0;
-                feederTriggeredOnce = true;
+            else if (whatLinesToDeliver == "poop") {
+                currentDialogue = poopCleanupDialogue[poopStory];
             }
-            currentDialogue = feederJustRightDialogue[feederStory];
-        }
-        else if (whatLinesToDeliver == "feederLow") {
-            if (!feederTriggeredOnce) {
-                feederStory = 0;
-                feederTriggeredOnce = true;
+            else if (whatLinesToDeliver == "feeder") {
+                currentDialogue = feederTutorialDialogue[feederStory];
             }
-            currentDialogue = feederTooLittleDialogue[feederStory];
-        }
-        else if (whatLinesToDeliver == "feederHigh") {
-            if (!feederTriggeredOnce) {
-                feederStory = 0;
-                feederTriggeredOnce = true;
+            else if (whatLinesToDeliver == "drinker") {
+                currentDialogue = drinkerTutorialDialogue[drinkerStory];
             }
-            currentDialogue = feederTooMuchDialogue[feederStory];
-        }
-        else if (whatLinesToDeliver == "drinkerRight") {
-            if (!drinkerTriggeredOnce) {
-                drinkerStory = 0;
-                drinkerTriggeredOnce = true;
+            else if (whatLinesToDeliver == "escape") {
+                currentDialogue = whereAreYouGoingDialogue[whereStory];
             }
-            currentDialogue = drinkerJustRightDialogue[drinkerStory];
-        }
-        else if (whatLinesToDeliver == "drinkerLow") {
-            if (!drinkerTriggeredOnce) {
-                drinkerStory = 0;
-                drinkerTriggeredOnce = true;
+            else if (whatLinesToDeliver == "poopCleanUp") {
+                if (!poopPickupTriggeredOnce) {
+                    poopStory = 0;
+                    poopPickupTriggeredOnce = true;
+                }
+                currentDialogue = poopPickupDialogue[poopStory];
             }
-            currentDialogue = drinkerTooLittleDialogue[drinkerStory];
-        }
-        else if (whatLinesToDeliver == "drinkerHigh") {
-            if (!drinkerTriggeredOnce) {
-                drinkerStory = 0;
-                drinkerTriggeredOnce = true;
+            else if (whatLinesToDeliver == "feederRight") {
+                if (!feederTriggeredOnce) {
+                    feederStory = 0;
+                    feederTriggeredOnce = true;
+                }
+                currentDialogue = feederJustRightDialogue[feederStory];
             }
-            currentDialogue = drinkerTooMuchDialogue[drinkerStory];
+            else if (whatLinesToDeliver == "feederLow") {
+                if (!feederTriggeredOnce) {
+                    feederStory = 0;
+                    feederTriggeredOnce = true;
+                }
+                currentDialogue = feederTooLittleDialogue[feederStory];
+            }
+            else if (whatLinesToDeliver == "feederHigh") {
+                if (!feederTriggeredOnce) {
+                    feederStory = 0;
+                    feederTriggeredOnce = true;
+                }
+                currentDialogue = feederTooMuchDialogue[feederStory];
+            }
+            else if (whatLinesToDeliver == "drinkerRight") {
+                if (!drinkerTriggeredOnce) {
+                    drinkerStory = 0;
+                    drinkerTriggeredOnce = true;
+                }
+                currentDialogue = drinkerJustRightDialogue[drinkerStory];
+            }
+            else if (whatLinesToDeliver == "drinkerLow") {
+                if (!drinkerTriggeredOnce) {
+                    drinkerStory = 0;
+                    drinkerTriggeredOnce = true;
+                }
+                currentDialogue = drinkerTooLittleDialogue[drinkerStory];
+            }
+            else if (whatLinesToDeliver == "drinkerHigh") {
+                if (!drinkerTriggeredOnce) {
+                    drinkerStory = 0;
+                    drinkerTriggeredOnce = true;
+                }
+                currentDialogue = drinkerTooMuchDialogue[drinkerStory];
+            }
+            stopClicking = true;
+            foreach (char c in currentDialogue.ToCharArray()) {
+                storyText.text += c;
+                yield return new WaitForSeconds(textSpeed);
+            }
+            stopClicking = false;
         }
-        stopClicking = true;
-        foreach (char c in currentDialogue.ToCharArray()) {
-            storyText.text += c;
-            yield return new WaitForSeconds(textSpeed);
-        }
-        stopClicking = false;
     }
 
     void NextLine() {
