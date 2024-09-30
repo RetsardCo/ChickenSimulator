@@ -365,11 +365,13 @@ public class StorylineScript : MonoBehaviour
     }
 
     void HideDialogue() {
-        Cursor.visible = false;
-        Cursor.lockState = CursorLockMode.Locked;
-        storyText.text = string.Empty;
-        currentDialogue = string.Empty;
-        storylineCanvas.SetActive(false);
-        storyOngoing = false;
+        if (!gameManager.isPaused) {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+            storyText.text = string.Empty;
+            currentDialogue = string.Empty;
+            storylineCanvas.SetActive(false);
+            storyOngoing = false;
+        }
     }
 }

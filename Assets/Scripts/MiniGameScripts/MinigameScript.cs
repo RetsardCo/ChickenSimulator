@@ -60,6 +60,7 @@ public class MinigameScript : MonoBehaviour
     float maximumTarget;
     float targetAmount;
     bool maxReached;
+    bool drinkerStop;
 
     [Header("Drinker Asset")]
     [SerializeField] Slider drinkerSlider;
@@ -138,6 +139,7 @@ public class MinigameScript : MonoBehaviour
         }
         else if (whatGame == "drinker") {
             isDrinkerMinigame = true;
+            drinkerStop = false;
             targetAmount = Random.Range(minimumRandom, maximumRandom);
 
             if (targetAmount >= maximumRandom) {
@@ -216,7 +218,7 @@ public class MinigameScript : MonoBehaviour
     }
 
     void DrinkerMinigame() {
-        if (Input.GetKey(KeyCode.Space)) {
+        if (Input.GetKey(KeyCode.Space) && !drinkerStop) {
             //Debug.Log(sliderSpeed);
             sliderIncreasing += Time.deltaTime * drinkerMultiplier;
             sliderSpeed = sliderIncreasing * 3.6f;
@@ -224,6 +226,7 @@ public class MinigameScript : MonoBehaviour
         }
 
         if (Input.GetKeyUp(KeyCode.Space)) {
+            drinkerStop = true;
             StartCoroutine(ResultsDisplay());
         }
 
@@ -286,6 +289,9 @@ public class MinigameScript : MonoBehaviour
             isFeederReady = false;
             playerDetectorScript.feederScript.hasContent = true;
             gameManager.FeedCount();
+            if (gameManager.days == 1 && storylineScript.storyOngoing) {
+                yield return new WaitUntil(() => !storylineScript.storyOngoing);
+            }
             yield return new WaitForSeconds(3.5f);
             feederInstructions.text = "Press Space to Continue...";
             //Debug.Log(isSpacePressed);
@@ -315,6 +321,9 @@ public class MinigameScript : MonoBehaviour
             }
             playerDetectorScript.drinkerScript.hasContent = true;
             gameManager.DrinkCount();
+            if (gameManager.days == 1 && storylineScript.storyOngoing) {
+                yield return new WaitUntil(() => !storylineScript.storyOngoing);
+            }
             yield return new WaitForSeconds(3.5f);
             drinkerInstructions.text = "Press Space to Continue...";
         }
