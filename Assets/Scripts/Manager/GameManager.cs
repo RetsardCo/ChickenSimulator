@@ -34,6 +34,10 @@ public class GameManager : MonoBehaviour
     [Header("Inventory Panel"), SerializeField]
     GameObject inventoryPanel;
 
+    [Header("Dev Text"), SerializeField]
+    TextMeshProUGUI devLabel;
+    [SerializeField] string devVersion;
+
     [Header("Day Label")]
     [SerializeField] Image bg;
     [SerializeField] TextMeshProUGUI dayLabel;
@@ -70,6 +74,7 @@ public class GameManager : MonoBehaviour
     string[] missions;
 
     private void Start() {
+        devLabel.text = devVersion;
         isPaused = false;
         isShopActive = false;
         isInventoryActive = false;
