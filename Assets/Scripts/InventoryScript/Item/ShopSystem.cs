@@ -1,12 +1,8 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using UnityEditorInternal.Profiling.Memory.Experimental;
 
 
 public class ShopSystem : MonoBehaviour

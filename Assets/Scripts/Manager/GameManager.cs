@@ -4,7 +4,6 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using Unity.Burst.CompilerServices;
 
 public class GameManager : MonoBehaviour
 {
@@ -53,6 +52,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] Transform playerLocation;
 
     [SerializeField] bool isInDevelopment;
+    bool mouseAppeared;
 
     [HideInInspector] public int goals;
     [HideInInspector] public bool isDayOneClear;
@@ -69,12 +69,11 @@ public class GameManager : MonoBehaviour
     List<string> daily;
     string[] missions;
 
-    Coroutine dayNightCycle;
-
     private void Start() {
         isPaused = false;
         isShopActive = false;
         isInventoryActive = false;
+        mouseAppeared = false;
         daily = new List<string>();
         missions = new string[] { "feed", "drink",/* "medicate",*/ "clean"};
         missionsBox.SetActive(false);
@@ -123,16 +122,16 @@ public class GameManager : MonoBehaviour
             if (!isInventoryActive && !isPaused) {
                 CallInventory();
             }
-            if (isInventoryActive && !isPaused) {
+            else if (isInventoryActive && !isPaused) {
                 UncallInventory();
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.P)) {
+        if (Input.GetKeyDown(KeyCode.Y)) {
             if (!isShopActive && !isPaused) {
                 CallShop();
             }
-            if (isShopActive && !isPaused) {
+            else if (isShopActive && !isPaused) {
                 UncallShop();
             }
         }
@@ -140,49 +139,70 @@ public class GameManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F1) && isInDevelopment) {
             SceneManager.LoadScene("MainGame");
         }
+
+        if (Input.GetKeyDown(KeyCode.F2) && isInDevelopment) {
+            if (!mouseAppeared) {
+                mouseAppeared = true;
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            else if (mouseAppeared) {
+                mouseAppeared = false;
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+            }
+        }
     }
 
     public void CallInventory() {
+        inventoryPanel.SetActive(true);
+        isMenuActive = true;
+        Debug.Log("Call Inventory is Called");
         isInventoryActive = true;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        inventoryPanel.SetActive(true);
     }
 
     public void UncallInventory() {
+        inventoryPanel.SetActive(false);
+        isMenuActive = false;
+        Debug.Log("Uncall Inventory is Called");
         isInventoryActive = false;
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
-        inventoryPanel.SetActive(false);
     }
 
     public void CallShop(){
+        shopPanel.SetActive(true);
+        isMenuActive = true;
+        Debug.Log("Call Shop is Called");
         Time.timeScale = 0f;
         isShopActive = true;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
-        shopPanel.SetActive(true);
     }
 
     public void UncallShop() {
+        shopPanel.SetActive(false);
+        isMenuActive = false;
+        Debug.Log("Uncaall Shop is Called");
         Time.timeScale = 1f;
         isShopActive = false;
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
-        shopPanel.SetActive(false);
     }
 
     public void PauseGame() {
-        Time.timeScale = 0f;
         settingsPanel.SetActive(true);
+        Time.timeScale = 0f;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
         isPaused = true;
     }
 
     public void UnpauseGame() {
-        Time.timeScale = 1f;
         settingsPanel.SetActive(false);
+        Time.timeScale = 1f;
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
         isPaused = false;
@@ -297,6 +317,7 @@ public class GameManager : MonoBehaviour
         if (goals == 3) {
             isEveryMissionDone = true;
             if (days == 1 && isDayOneClear) {
+                storylineScript.lockedDialogue = false;
                 storylineScript.whatLinesToDeliver = "tutorial";
                 StartCoroutine(storylineScript.TypeLine());
             }

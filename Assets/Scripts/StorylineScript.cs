@@ -19,6 +19,7 @@ public class StorylineScript : MonoBehaviour
     [HideInInspector] public bool dialogueEnding;
     bool stopClicking;
 
+
     [SerializeField] string[] dayOneTutorialDialogues;
     [HideInInspector] public bool menuAccessed;
     int currentStory;
@@ -70,7 +71,7 @@ public class StorylineScript : MonoBehaviour
     private void Start() {
         ResetAllLines();
         storyOngoing = false;
-        lockedDialogue = true;
+        lockedDialogue = false;
         currentDialogue = string.Empty;
         nameReveal.SetActive(false);
         //StartCoroutine(TutorialStory());
@@ -99,9 +100,10 @@ public class StorylineScript : MonoBehaviour
                             storyText.text = string.Empty;
                             currentStory++;
                             menuAccessed = true;
+                            lockedDialogue = true;
                         }
                     }
-                    else {
+                    else if(!lockedDialogue){
                         NextLine();
                     }
                 }
